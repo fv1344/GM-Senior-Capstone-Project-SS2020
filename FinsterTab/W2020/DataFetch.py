@@ -129,7 +129,7 @@ class DataFetch:
         for n in keys:
             if (keys[n] == 'Quandl'):
                 data = quandl.get(n, authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",                         #Retrieves data source corresponding to var[n]
-                                  end_date="2020-03-05")
+                                  end_date=end)
                 data = data.reset_index()                                                                               #Resets the index so easier to work with
 
                 if (len(data.columns) == 2):                                                                            #Checks if the number of columns is 2 as if so it is straightforward to draw the data
