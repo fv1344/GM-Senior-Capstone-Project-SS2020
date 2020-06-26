@@ -9,8 +9,12 @@ from fredapi import Fred
 
 fred = Fred(api_key='26a5ada544f2b9589d92bac5f792dc5d')
 
-
-# Declaration and Definition of DataFetch class
+"""
+    This class is used to populate the following tables:
+     - dbo_instrumentstatistics (Close prices)
+     - dbo_macroeconstatistics (Macro indicators)
+     - dbo_datedim (Date dimension)
+"""
 
 class DataFetch:
     def __init__(self, engine, table_name):
@@ -67,10 +71,11 @@ class DataFetch:
             # send data to database
             # replace data each time program is run
 
-            data.to_sql('dbo_instrumentstatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),
+            data.to_sql('dbo_instrumentstatistics', self.engine, if_exists='append',
                         index=False, dtype={'date': sal.Date, 'open': sal.FLOAT, 'high': sal.FLOAT, 'low': sal.FLOAT,
                                             'close': sal.FLOAT, 'adj close': sal.FLOAT, 'volume': sal.FLOAT})
 
+    # Populates the date dimension table. Only needs to be ran once.
     def get_calendar(self):
         """
         Get date data to track weekends, holidays, quarter, etc
