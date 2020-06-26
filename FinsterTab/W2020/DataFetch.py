@@ -22,7 +22,7 @@ class DataFetch:
         self.engine = engine
         self.table_name = table_name
         self.datasource = 'yahoo'
-        self.datalength = 2192    # last 6 years, based on actual calendar days of 365
+        self.datalength = 2192  # last 6 years, based on actual calendar days of 365
 
     def get_datasources(self):
         """
@@ -81,36 +81,37 @@ class DataFetch:
         truncate_query = 'TRUNCATE TABLE dbo_datedim'
         self.engine.execute(truncate_query)
 
-        # 3 years of past data and up to 1 year of future forecasts
-        begin = date.today() - timedelta(days=self.datalength)
-        end = date.today() + timedelta(days=365)
+        # Set the date dimension range
+        lowerBound = pd.to_datetime('1947-01-01').date()
+        upperBound = pd.to_datetime('2047-01-01').date()
 
         # list of US holidays
         cal = get_calendar('USFederalHolidayCalendar')  # Create calendar instance
-        cal.rules.pop(7)   # Remove Veteran's Day
-        cal.rules.pop(6)   # Remove Columbus Day
-        tradingCal = HolidayCalendarFactory('TradingCalendar', cal, GoodFriday)   # Good Friday is OFF in Stock Market
+        cal.rules.pop(7)  # Remove Veteran's Day
+        cal.rules.pop(6)  # Remove Columbus Day
+        tradingCal = HolidayCalendarFactory('TradingCalendar', cal, GoodFriday)  # Good Friday is OFF in Stock Market
 
         # new instance of class for STOCK MARKET holidays
         tradingHolidays = tradingCal()
-        holidays = tradingHolidays.holidays(begin, end)
+        holidays = tradingHolidays.holidays(lowerBound, upperBound)
 
-        # 3 years of past data
-        day = date.today() - timedelta(days=self.datalength)
+        # Set the start date for populating the table
+        iterDate = lowerBound
 
-        while day < end:
+        # Populate the table
+        while iterDate < upperBound:
             date_query = 'INSERT INTO dbo_datedim VALUES({},{},{},{},{},{})'   # insert query into the database
-            day = day + timedelta(days=1)
-            day_str = "'" + str(day) + "'"
-            qtr = (int((day.month - 1) / 3)) + 1    # calculate quarter value
+            iterDate = iterDate + timedelta(days=1)
+            day_str = "'" + str(iterDate) + "'"
+            qtr = (int((iterDate.month - 1) / 3)) + 1    # calculate quarter value
 
             # check if the day is a weekend?
-            weekend = (1 if day.isoweekday() == 6 or day.isoweekday() == 7 else 0)
+            weekend = (1 if iterDate.isoweekday() == 6 or iterDate.isoweekday() == 7 else 0)
 
             # is day a holiday in US (NY day, MLK, President's Day, Good Friday, Memorial Day,
             # July 4, Labor Day, Thanksgiving, Christmas
-            isholiday = (1 if day in holidays else 0)
-            date_query = date_query.format(day_str, day.year, day.month, qtr, weekend, isholiday)
+            isholiday = (1 if iterDate in holidays else 0)
+            date_query = date_query.format(day_str, iterDate.year, iterDate.month, qtr, weekend, isholiday)
             self.engine.execute(date_query)
 
     def macroFetch(self):
