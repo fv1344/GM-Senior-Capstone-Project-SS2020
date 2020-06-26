@@ -26,8 +26,11 @@ ticker_symbols = master_data.get_datasources()
 # get data from Yahoo! Finance and store in InstrumentStatistics
 master_data.get_data(ticker_symbols)
 
+
 # get date data and store in DateDim, replaced the SQL calendar code
-master_data.get_calendar()
+# only run this if date dim table is empty
+# master_data.get_calendar()
+
 
 
 #Macro Economic Variable Functions
