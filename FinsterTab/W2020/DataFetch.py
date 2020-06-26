@@ -22,7 +22,6 @@ class DataFetch:
         self.engine = engine
         self.table_name = table_name
         self.datasource = 'yahoo'
-        self.datalength = 2192  # last 6 years, based on actual calendar days of 365
 
     def get_datasources(self):
         """
@@ -40,15 +39,15 @@ class DataFetch:
         Store data in MySQL database
         :param sources: provides ticker symbols of instruments being tracked
         """
-        now = datetime.now()  # Date Variables
 
-        start = datetime.now()-timedelta(days=self.datalength)  # get date value from 3 years ago
-        end = now.strftime("%Y-%m-%d")
+        # Set data range for the past 10 years
+        lowerBound = datetime.now()-timedelta(days=10*365)
+        upperBound = datetime.now().strftime("%Y-%m-%d")
 
         # Cycle through each ticker symbol
         for n in range(len(sources)):
             # data will be a 2D Pandas Dataframe
-            data = dr.DataReader(sources.iat[n, sources.columns.get_loc('instrumentname')], self.datasource, start, end)
+            data = dr.DataReader(sources.iat[n, sources.columns.get_loc('instrumentname')], self.datasource, lowerBound, upperBound)
 
             symbol = [sources['instrumentid'][n]] * len(data)      # add column to identify instrument id number
             data['instrumentid'] = symbol
@@ -65,8 +64,8 @@ class DataFetch:
 
             data.sort_values(by=['date'])    # make sure data is ordered by trade date
 
-        # send data to database
-        # replace data each time program is run
+            # send data to database
+            # replace data each time program is run
 
             data.to_sql('dbo_instrumentstatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),
                         index=False, dtype={'date': sal.Date, 'open': sal.FLOAT, 'high': sal.FLOAT, 'low': sal.FLOAT,
