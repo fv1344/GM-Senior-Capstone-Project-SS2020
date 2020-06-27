@@ -31,6 +31,40 @@ class DataForecast:
         self.engine = engine
         self.table_name = table_name
 
+    def calculate_william_forecast(self):
+        """
+        Step 1: Find the volatility of the stock
+        Step 2: Find the trend of the stock
+        Step 3: Forecast a value
+        Find the max and min close price over the past x days
+        Find the SMA over the past x days
+        Compare the difference of the max and min to the average stock price
+         = Range/SMA
+        This acts as the volatility of the stock
+         - The higher the percent, the more volatile the stock
+         - Ex: GM over 5 days
+            - Max: $26.37
+            - Min: $24.46
+            - Range: $1.91
+            - SMA: $25.518
+            - 7.5% max deviation from the average
+            - Current close = $24.46
+            - 7.5% of $24.46 = $1.83 of potential change ($26.29 to 22.63)
+            - Current close < Avg: Trending down at (25.518-24.46)/25.518 = 4% less than average
+            - Tilt $1.83 4% more in favor of downward trend: $1.83*0.04 = $0.07 to shift
+            - $26.29 - $0.07 = $26.22
+            - $22.63 - $0.07 = $22.56
+            - Average number in range = ($26.22 + $22.56)/2 = $24.39
+            - Random number in range = $22.93
+
+
+        Set those values as the limits of the forecast
+        Find the simple moving average over the past x days
+        Increase the limit of the value the SMA is trending towards
+
+        :return:
+        """
+
     def calculate_forecast(self):
         """
         Calculate historic one day returns based on traditional forecast model
