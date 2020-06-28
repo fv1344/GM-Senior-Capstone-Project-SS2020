@@ -71,7 +71,7 @@ class DataFetch:
             # send data to database
             # replace data each time program is run
 
-            data.to_sql('dbo_instrumentstatistics', self.engine, if_exists='append',
+            data.to_sql('dbo_instrumentstatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),
                         index=False, dtype={'date': sal.Date, 'open': sal.FLOAT, 'high': sal.FLOAT, 'low': sal.FLOAT,
                                             'close': sal.FLOAT, 'adj close': sal.FLOAT, 'volume': sal.FLOAT})
 
