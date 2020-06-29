@@ -32,7 +32,9 @@ ticker_symbols = master_data.get_datasources()
 # Get data from Yahoo! Finance and store in InstrumentStatistics
 master_data.get_data(ticker_symbols)
 
-
+my = DataForecast(db_engine, instrument_master)
+my.calculate_william_forecast()
+"""
 # Get date data and store in DateDim, replaced the SQL calendar code
 if reset_date_dim:
     master_data.get_calendar()
@@ -124,3 +126,5 @@ simulator.combination_trade_sim()
 
 # buy and hold simulation
 simulator.buy_hold_sim()
+
+"""
