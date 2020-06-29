@@ -17,8 +17,7 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 	* Port: 3306  
 	* Username: root  
 	* Password: password  
-	* (or edit connection string in:  
-	-> gmfintech2019 -> FinsterTab -> F2019 -> dbEngine.py)
+	* (or edit connection string in: -> gmfintech2019 -> FinsterTab -> F2019 -> dbEngine.py)
 
 3. Create schema named 'gmfsp_db' in MySQL Workbench
 
@@ -42,8 +41,6 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 		7. Type 'cd '
 		8. Paste the address
 		9. Press enter
-	*(For example, if the folder is saved onto your Desktop. The command would be "cd Desktop" [Press Enter] "cd gmfintech" [Press Enter])
-	*(If Frino was a User of this machine, you would see: C:\Users\Frino\Desktop\gmfintech> ) 
 
 3. Clone GitHub Repository in 'gmfintech' folder by executing the following command:  
 	* git clone https://github.com/frinojais/GM-Senior-Capstone-Project-SS2020.git
@@ -73,7 +70,7 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 
 1. Open Power BI Desktop
 
-2. Select Get data from th Home tab
+2. Select Get data from the Home tab
 
 3. Search for and select MySQL database
 
@@ -83,6 +80,6 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 
 6. Cancel the Navigator window
 
-7. Import the report template (GM-Senior-Capstone-Project-SS2020 -> FinsterTab -> W2020 -> Power BI -> GM_FinTech_Application.pbit)
+7. Import the report template using the Import button in the File tab (GM-Senior-Capstone-Project-SS2020 -> FinsterTab -> W2020 -> Power BI -> GM_FinTech_Application.pbit)
 
 
