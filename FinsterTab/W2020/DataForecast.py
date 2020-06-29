@@ -99,6 +99,7 @@ class DataForecast:
 
             print("\n\n***** Generate Forecast Close Price *****")
             forecast_choice_average = (shifted_upper_range + shifted_lower_range) / 2
+            rand.seed(datetime.now())
             forecast_choice_random = rand.uniform(shifted_lower_range, shifted_upper_range)
             print("Forecasted Close Price (Average in shifted range): ${:.2f}".format(forecast_choice_average))
             print("Forecasted Close Price (Random in shifted range): ${:.2f}".format(forecast_choice_random))
