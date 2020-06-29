@@ -16,6 +16,7 @@ from sklearn.model_selection import train_test_split    # not used at this time
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
+import random as rand
 
 
 # class declaration and definition
@@ -32,6 +33,77 @@ class DataForecast:
         self.table_name = table_name
 
     def calculate_william_forecast(self):
+        # get list of ticker symbols
+        pd.set_option('mode.chained_assignment', None)
+        query = 'SELECT * FROM %s' % self.table_name
+        df = pd.read_sql_query(query, self.engine)
+
+        for ID in df['instrumentid']:
+            # get the close column data from instrument statistics
+            query = 'SELECT close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
+
+            # save results into a data frame
+            data = pd.read_sql_query(query, self.engine)
+
+            # filter to the most recent 5 days
+            data_limited = data['close'].iloc[-5:]
+
+            # perform calculations
+            last_close = data_limited.iloc[-1]
+            max_close = data_limited.max()
+            min_close = data_limited.min()
+            diff_close = max_close - min_close
+            avg_close = data_limited.mean()
+            max_deviation = diff_close / avg_close
+            forecast_range = last_close * max_deviation
+            neutral_lower_range = last_close - forecast_range
+            neutral_upper_range = last_close + forecast_range
+
+            if last_close < avg_close:
+                ascend = False
+                down_percent = (avg_close-last_close)/avg_close
+                shift_amount = forecast_range*down_percent
+                shifted_lower_range = neutral_lower_range - shift_amount
+                shifted_upper_range = neutral_upper_range - shift_amount
+            else:
+                ascend = True
+                up_percent = (last_close-avg_close)/avg_close
+                shift_amount = forecast_range * up_percent
+                shifted_lower_range = neutral_lower_range + shift_amount
+                shifted_upper_range = neutral_upper_range + shift_amount
+
+            # print results
+            print("\n\n***** 5-Day Close Statistics for {} *****".format(ID))
+            print("Maximum: ${:.2f}".format(max_close))
+            print("Minimum: ${:.2f}".format(min_close))
+            print("Difference: ${:.2f}".format(diff_close))
+            print("Current: ${:.2f}".format(last_close))
+            print("Average: ${:.2f}".format(avg_close))
+
+            print("\n\n***** Forecast Range *****")
+            print("Maximum deviation from the average: {:.2f}%".format(max_deviation * 100))
+            print("{:.2f}% of ${:.2f} = ${:.2f} of forecast range"
+                  .format(max_deviation * 100, last_close, forecast_range))
+            print("Neutral Forecast Range: ${:.2f} - ${:.2f}".format(neutral_lower_range, neutral_upper_range))
+
+            print("\n\n***** Shift Forecast Range *****")
+            if ascend:
+                print("Current close is {:.2f}% higher than the average".format(up_percent * 100))
+                print("Shifting the forecast range in favor of an increase: {:.2}% of ${:.2f} = ${:.2f}"
+                      .format(up_percent * 100, forecast_range, shift_amount))
+            else:
+                print("Current close is {:.2f}% lower than the average".format(down_percent * 100))
+                print("Shifting the forecast range in favor of a decrease: {:.2}% of ${:.2f} = ${:.2f}"
+                      .format(down_percent * 100, forecast_range, shift_amount))
+            print("Shifted Forecast Range: ${:.2f} - ${:.2f}".format(shifted_lower_range, shifted_upper_range))
+
+            print("\n\n***** Generate Forecast Close Price *****")
+            forecast_choice_average = (shifted_upper_range + shifted_lower_range) / 2
+            forecast_choice_random = rand.uniform(shifted_lower_range, shifted_upper_range)
+            print("Forecasted Close Price (Average in shifted range): ${:.2f}".format(forecast_choice_average))
+            print("Forecasted Close Price (Random in shifted range): ${:.2f}".format(forecast_choice_random))
+
+            print("________________________")
         """
         Step 1: Find the volatility of the stock
         Step 2: Find the trend of the stock
@@ -61,9 +133,8 @@ class DataForecast:
         Set those values as the limits of the forecast
         Find the simple moving average over the past x days
         Increase the limit of the value the SMA is trending towards
-
-        :return:
         """
+
 
     def calculate_forecast(self):
         """
