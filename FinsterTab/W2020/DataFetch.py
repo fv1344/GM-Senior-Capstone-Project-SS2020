@@ -22,7 +22,7 @@ class DataFetch:
         self.engine = engine
         self.table_name = table_name
         self.datasource = 'yahoo'
-        self.datalength = 2192    # last 6 years, based on actual calendar days of 365
+        #self.datalength = 2192    # last 6 years, based on actual calendar days of 365
 
     def get_datasources(self):
         """
@@ -40,15 +40,22 @@ class DataFetch:
         Store data in MySQL database
         :param sources: provides ticker symbols of instruments being tracked
         """
-        now = datetime.now()  # Date Variables
+        #now = datetime.now()  # Date Variables
 
-        start = datetime.now()-timedelta(days=self.datalength)  # get date value from 3 years ago
-        end = now.strftime("%Y-%m-%d")
+        #start = datetime.now()-timedelta(days=self.datalength)  # get date value from 3 years ago
+        #end = now.strftime("%Y-%m-%d")
+
+        #Removing the last 3 years code and setting data range for past 10 years
+
+        lowerBound = datetime.now()-timedelta(days=10*365)
+        upperBound = datetime.now().strftime("%Y-%m-%d")
 
         # Cycle through each ticker symbol
         for n in range(len(sources)):
             # data will be a 2D Pandas Dataframe
-            data = dr.DataReader(sources.iat[n, sources.columns.get_loc('instrumentname')], self.datasource, start, end)
+            #data = dr.DataReader(sources.iat[n, sources.columns.get_loc('instrumentname')], self.datasource, start, end)
+            #changing the bounds to new variables set above
+            data = dr.DataReader(sources.iat[n, sources.columns.get_loc('instrumentname')], self.datasource, lowerBound, upperBound)
 
             symbol = [sources['instrumentid'][n]] * len(data)      # add column to identify instrument id number
             data['instrumentid'] = symbol
@@ -68,7 +75,8 @@ class DataFetch:
         # send data to database
         # replace data each time program is run
 
-            data.to_sql('dbo_instrumentstatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),
+            #no need to do "replace"
+            data.to_sql('dbo_instrumentstatistics', self.engine, if_exists='append',
                         index=False, dtype={'date': sal.Date, 'open': sal.FLOAT, 'high': sal.FLOAT, 'low': sal.FLOAT,
                                             'close': sal.FLOAT, 'adj close': sal.FLOAT, 'volume': sal.FLOAT})
 
@@ -82,8 +90,15 @@ class DataFetch:
         self.engine.execute(truncate_query)
 
         # 3 years of past data and up to 1 year of future forecasts
-        begin = date.today() - timedelta(days=self.datalength)
-        end = date.today() + timedelta(days=365)
+        #begin = date.today() - timedelta(days=self.datalength)
+        #end = date.today() + timedelta(days=365)
+
+        #we now need more time range so:
+        #set date dimension range
+
+        lowerBound = pd.to_datetime('2001-01-01').date()
+        upperBound = pd.to_datetime('2047-01-01').date()
+
 
         # list of US holidays
         cal = get_calendar('USFederalHolidayCalendar')  # Create calendar instance
@@ -93,24 +108,39 @@ class DataFetch:
 
         # new instance of class for STOCK MARKET holidays
         tradingHolidays = tradingCal()
-        holidays = tradingHolidays.holidays(begin, end)
+        #holidays = tradingHolidays.holidays(begin, end)
+
+        #changing the variables in the above statement
+        holidays = tradingHolidays.holidays(lowerBound, upperBound)
 
         # 3 years of past data
-        day = date.today() - timedelta(days=self.datalength)
+        #day = date.today() - timedelta(days=self.datalength)
 
-        while day < end:
-            date_query = 'INSERT INTO dbo_datedim VALUES({},{},{},{},{},{})'   # insert query into the database
-            day = day + timedelta(days=1)
-            day_str = "'" + str(day) + "'"
-            qtr = (int((day.month - 1) / 3)) + 1    # calculate quarter value
+        #Setting start date to populate the table:
+        iterDate = lowerBound
+
+        #while day < end:
+            #date_query = 'INSERT INTO dbo_datedim VALUES({},{},{},{},{},{})'   # insert query into the database
+            #day = day + timedelta(days=1)
+            #day_str = "'" + str(day) + "'"
+            #qtr = (int((day.month - 1) / 3)) + 1    # calculate quarter value
+
+        #NEW WHILE LOOP
+
+        while iterDate < upperBound:
+            date_query = 'INSERT INTO dbo_datedim VALUES({}, {}, {}, {}, {}, {})' #query for database
+            iterDate = iterDate + timedelta(days=1)
+            day_str = "'"+str(iterDate)+"'"
+            qtr = (int((iterDate.month - 1) / 3)) + 1       #for quarter value
 
             # check if the day is a weekend?
-            weekend = (1 if day.isoweekday() == 6 or day.isoweekday() == 7 else 0)
+            #weekend = (1 if day.isoweekday() == 6 or day.isoweekday() == 7 else 0)
+            weekend = (1 if iterDate.isoweekday() == 6 or iterDate.isoweekday() == 7 else 0)
 
             # is day a holiday in US (NY day, MLK, President's Day, Good Friday, Memorial Day,
             # July 4, Labor Day, Thanksgiving, Christmas
-            isholiday = (1 if day in holidays else 0)
-            date_query = date_query.format(day_str, day.year, day.month, qtr, weekend, isholiday)
+            isholiday = (1 if iterDate in holidays else 0)
+            date_query = date_query.format(day_str, iterDate.year, iterDate.month, qtr, weekend, isholiday)
             self.engine.execute(date_query)
 
     def macroFetch(self):
@@ -129,7 +159,7 @@ class DataFetch:
         for n in keys:
             if (keys[n] == 'Quandl'):
                 data = quandl.get(n, authtoken="izGuybqHXPynXPY1Yz29", start_date="2001-12-31",                         #Retrieves data source corresponding to var[n]
-                                  end_date=end)
+                                  end_date=end) #set to the end date initialized previously to avoid any missing data
                 data = data.reset_index()                                                                               #Resets the index so easier to work with
 
                 if (len(data.columns) == 2):                                                                            #Checks if the number of columns is 2 as if so it is straightforward to draw the data
@@ -137,7 +167,7 @@ class DataFetch:
                     data.sort_values(by=['date'])                                                                       #Ensures the rows are ordered according to date
                     data['macroeconcode'] = mec['macroeconcode'][cnt]                                                                               #Adds a new column for the instrument ID
 
-                    data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if cnt == 0 else 'append'),# Inserts the data into SQL
+                    data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('append' if cnt == 0 else 'append'),# Inserts the data into SQL
                                 index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT})
 
                     query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconcode = {}'.format(curDate, '"' + mec['macroeconcode'][cnt] + '"')     #Sets the access date column for the macro master table
@@ -163,7 +193,7 @@ class DataFetch:
                         data1.rename(columns={'date': 'date', colNewName[j+1]: 'statistics'}, inplace=True)             #We then dynamically rename the column name of the new dataframe variable
                         data1['macroeconcode'] = mec['macroeconcode'][cnt]                                              #Then add an instrument ID column that adds the value of the indexing variable of the outer for loop to the indexing of the inner for loop + 1
                         data1.to_sql('dbo_macroeconstatistics', self.engine,                                            #And finally insert the new dataframe variable into MySQL
-                                     if_exists=('replace' if cnt == 0 else 'append'), index=False)
+                                     if_exists=('append' if cnt == 0 else 'append'), index=False)
 
                         query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconcode = {}'.format(curDate, '"' + mec['macroeconcode'][cnt] + '"')
                         self.engine.execute(query)
@@ -188,7 +218,7 @@ class DataFetch:
                     data.rename(columns={'date' : 'date', 'close': 'statistics'}, inplace=True)
                     data['macroeconcode'] = mec['macroeconcode'][cnt]
                     data.to_sql('dbo_macroeconstatistics', self.engine,
-                                if_exists=('replace' if cnt == 0 else 'append'), index=False)
+                                if_exists=('append' if cnt == 0 else 'append'), index=False)
 
                     query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconcode = {}'.format(curDate, '"' + mec['macroeconcode'][cnt] + '"')
                     self.engine.execute(query)
@@ -202,7 +232,7 @@ class DataFetch:
                 data.rename(columns={'index': 'date'},inplace=True)
                 data['macroeconcode'] = mec['macroeconcode'][cnt]
 
-                data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('replace' if cnt == 0 else 'append'),
+                data.to_sql('dbo_macroeconstatistics', self.engine, if_exists=('append' if cnt == 0 else 'append'),
                             index=False, dtype={'date': sal.Date, 'statistics': sal.FLOAT})
 
                 query = 'UPDATE dbo_macroeconmaster SET datecreated={}  WHERE macroeconcode = {}'.format(curDate, '"' + mec['macroeconcode'][cnt] + '"')  # Sets the access date column for the macro master table

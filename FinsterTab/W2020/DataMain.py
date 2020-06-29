@@ -27,8 +27,10 @@ ticker_symbols = master_data.get_datasources()
 master_data.get_data(ticker_symbols)
 
 # get date data and store in DateDim, replaced the SQL calendar code
-master_data.get_calendar()
+#master_data.get_calendar()
 
+#RUN THIS IS DATEDIM TABLE IS EMPTY
+master_data.get_calendar()
 
 #Macro Economic Variable Functions
 FinsterTab.W2020.AccuracyTest.get_past_data(db_engine)

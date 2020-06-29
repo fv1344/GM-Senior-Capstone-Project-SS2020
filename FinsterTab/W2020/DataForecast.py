@@ -866,6 +866,8 @@ class DataForecast:
         id2 = id2.reset_index(drop = True)
 
         # Sets value for number of datapoints you would like to work with
+        #Assuming this is the number of predictions the for loop makes
+        #Changing this according to changed monthly calculations
         n = 9
 
         # Getting Dates for Future Forecast#
@@ -876,6 +878,7 @@ class DataForecast:
         date = []
 
         # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+        #Changed to month wise calculations
         if (currentDate.month < 4):
             count = 0
         elif (currentDate.month < 7 and currentDate.month >= 4):
@@ -1031,6 +1034,235 @@ class DataForecast:
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('replace'),
                      index=False)
 
+    def MSF_new(self):
+        # Queires the database to grab all of the Macro Economic Variable codes
+        query = "SELECT macroeconcode FROM dbo_macroeconmaster WHERE activecode = 'A'"
+        id = pd.read_sql_query(query, self.engine)
+        id = id.reset_index(drop=True)
+
+        # Queries the database to grab all of the instrument IDs
+        query = 'SELECT instrumentid FROM dbo_instrumentmaster'
+        id2 = pd.read_sql_query(query, self.engine)
+        id2 = id2.reset_index(drop=True)
+
+        # Sets value for number of datapoints you would like to work with
+        # Assuming this is the number of predictions the for loop makes
+        # Changing this according to changed monthly calculations
+        n = 9
+
+        # Getting Dates for Future Forecast#
+        # Initialize the currentDate variable for use when grabbing the forecasted dates
+        currentDate = datetime.today()
+
+        # Creates a list to store future forecast dates
+        date = []
+
+        # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+        # Changed to month wise calculations
+        if (currentDate.month == 1):
+            count = 0
+        elif (currentDate.month == 2):
+            count = 1
+        elif (currentDate.month == 3):
+            count = 2
+        elif (currentDate.month == 4):
+            count = 3
+        elif (currentDate.month == 5):
+            count = 4
+        elif (currentDate.month == 6):
+            count = 5
+        elif (currentDate.month == 7):
+            count = 6
+        elif (currentDate.month == 8):
+            count = 7
+        elif (currentDate.month == 9):
+            count = 8
+        elif (currentDate.month == 10):
+            count = 9
+        elif (currentDate.month == 11):
+            count = 10
+        elif (currentDate.month == 12):
+            count = 11
+        else:
+            count = -1
+
+        # Initialize a variable to the current year
+        year = currentDate.year
+
+        # Prints out the accuracy figures, not necessary can be commented out
+        FinsterTab.W2020.AccuracyTest.MSF1_accuracy(self.engine)
+
+        # Setup a for loop to append the date list with the date of the start of the next month
+        # For loop will run n times, corresponding to amount of data points we are working with
+        for i in range(n):
+
+            # If the count is 0 then we are still in the first month (january)
+            if (count == 0):
+                # Append the date list with corresponding year
+                date.append(str(year) + "-01-" + "31")
+                # Increase count so this date is not repeated for this year
+                count += 1
+
+            # Do it again for the next month - Feb
+            elif (count == 1):
+                date.append(str(year) + "-02-" + "28")
+                count += 1
+
+            #March
+            elif (count == 2):
+                date.append(str(year) + "-03-" + "31")
+                count += 1
+            #April
+            elif (count == 3):
+                date.append(str(year) + "-04-" + "30")
+                count += 1
+            #May
+            elif (count == 4):
+                date.append(str(year) + "-05-" + "31")
+                count += 1
+            #june
+            elif (count == 5):
+                date.append(str(year) + "-06-" + "30")
+                count += 1
+            #july
+            elif (count == 6):
+                date.append(str(year) + "-07-" + "31")
+                count += 1
+            #august
+            elif (count == 7):
+                date.append(str(year) + "-08-" + "31")
+                count += 1
+            #sept
+            elif (count == 8):
+                date.append(str(year) + "-09-" + "30")
+                count += 1
+            #oct
+            elif (count == 9):
+                date.append(str(year) + "-10-" + "31")
+                count += 1
+            #nov
+            elif (count == 10):
+                date.append(str(year) + "-11-" + "30")
+                count += 1
+
+            # Until we account for the last month of the year (Dec)
+            elif (count == 11):
+                date.append(str(year) + "-12-" + "31")
+                count = 0
+                # Where we then increment the year for the next iterations
+                year = year + 1
+
+        # Initializes a list for which we will eventually be storing all data to add to the macroeconalgorithm database table
+        data = []
+
+        # Create a for loop to iterate through all of the instrument ids
+        for v in id2['instrumentid']:
+
+            # Median_forecast will be a dictionary where the key is the date and the value is a list of forecasted prices
+            median_forecast = {}
+            # This will be used to easily combine all of the forecasts for different dates to determine the median forecast value
+            for i in date:
+                temp = {i: []}
+                median_forecast.update(temp)
+
+            #data['movAvg'] = data['close'].rolling(ma).mean()
+
+            # Initializes a variable to represent today's date, used to fetch forecast dates
+            currentDate = str(datetime.today())
+            # Applies quotes to current date so it can be read as a string
+            currentDate = ("'" + currentDate + "'")
+
+            # This query will grab quarterly instrument prices from between 2014 and the current date to be used in the forecasting
+            query = "SELECT close, instrumentid FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
+                    "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
+                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
+                    "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
+                    "MONTH(z.date) = 12)".format(v, currentDate)
+
+            # Executes the query and stores the result in a dataframe variable
+            df2 = pd.read_sql_query(query, self.engine)
+
+            # This for loop iterates through the different macro economic codes to calculate the percent change for each macroeconomic variable
+            for x in id['macroeconcode']:
+
+                # Retrieves Relevant Data from Database
+
+                query = 'SELECT * FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + str(x) + '"')
+                df = pd.read_sql_query(query, self.engine)
+                macro = df.tail(n)
+                SP = df2.tail(n)
+                temp = df.tail(n + 1)
+                temp = temp.reset_index()
+
+                # Converts macro variables to precent change
+                macroPercentChange = macro
+                macro = macro.reset_index(drop=True)
+                SP = SP.reset_index(drop=True)
+                macroPercentChange = macroPercentChange.reset_index(drop=True)
+
+                for i in range(0, n):
+
+                    if (i == 0):
+                        macrov = (macro['statistics'][i] - temp['statistics'][i]) / temp['statistics'][i]
+                        macroPercentChange['statistics'].iloc[i] = macrov * 100
+                    else:
+                        macrov = (macro['statistics'][i] - macro['statistics'][i - 1]) / macro['statistics'][i - 1]
+                        macroPercentChange['statistics'].iloc[i] = macrov * 100
+
+                # Algorithm for forecast price
+                S = DataForecast.calc(self, macroPercentChange, SP,
+                                      n)  # Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
+
+                # temp_price will be used to hold the previous forecast price for the next prediction
+                temp_price = 0
+
+                # isFirst will determine whether or not this is the first calculation being done
+                # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
+                # IF it is false then we use the previous forecast price to predict the next forecast price
+                isFirst = True
+
+                # Setup a for loop to calculate the final forecast price and add data to the list variable data
+                for i in range(n):
+                    if isFirst:
+                        if x in [2, 3, 4]:
+                            temp_price = ((S * SP['close'].iloc[n - 1]) + SP['close'].iloc[n - 1])
+                            isFirst = False
+                        else:
+                            temp_price = ((S * SP['close'].iloc[n - 1]) + SP['close'].iloc[n - 1])
+                            isFirst = False
+                    else:
+                        if x in [2, 3, 4]:
+                            temp_price = ((S * temp_price) + temp_price)
+                        else:
+                            temp_price = ((S * temp_price) + temp_price)
+
+                    # Once the forecast price is calculated append it to median_forecast list
+                    median_forecast[date[i]].append(temp_price)
+
+            # Calculates the median value for each date using a list of prices forecasted by each individual macro economic variable
+            forecast_prices = []
+            for i in date:
+                # Sort the forecasted prices based on date
+                sorted_prices = sorted(median_forecast[i])
+                # calculate the median forecasted price for each date
+                if len(sorted_prices) % 2 == 0:
+                    center = int(len(sorted_prices) / 2)
+                    forecast_prices.append(sorted_prices[center])
+                else:
+                    center = int(len(sorted_prices) / 2)
+                    forecast_prices.append((sorted_prices[center] + sorted_prices[center - 1]) / 2)
+
+            # Set up a for loop to construct a list using variables associated with macroeconalgorithm database table
+            for i in range(len(forecast_prices)):
+                data.append([date[i], v, 'ALL', forecast_prices[i], 'MSF1', 0])
+
+        # Convert data list to dataframe variable
+        table = pd.DataFrame(data, columns=['forecastdate', 'instrumentid', 'macroeconcode',
+                                            'forecastprice', 'algorithmcode', 'prederror'])
+
+        # Fill the database with the relevant information
+        table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('replace'),
+                     index=False)
     def MSF2(self):
         # If you want to use set weightings, set this true. Otherwise set it false
         # If you set it to true then the weightings can be altered for MSF2 in AccuracyTest.py on line 647 in create_weightings_MSF2

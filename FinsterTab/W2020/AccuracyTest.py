@@ -132,12 +132,12 @@ def MSF1_accuracy(self):
     # start_date represents the starting date for the forecasts and the end of the training dates
     start_date = "'2018-01-01'"
     # end_date represents the date for which the forecasting ends
-    end_date = "'2020-01-01'"
+    end_date = "'2020-01-04'" #program running with this date, but no change in results
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
     train_date = "'2016-01-01'"
 
     # Bool to determine whether we append to dbo_tempvisualize or replace the values
-    to_append = False
+    to_append = False #not working with "True" value
 
     # Create a for loop to iterate through all of the instrument ids
     for v in id2['instrumentid']:
