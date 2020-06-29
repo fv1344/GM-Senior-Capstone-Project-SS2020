@@ -37,6 +37,7 @@ class DataForecast:
         pd.set_option('mode.chained_assignment', None)
         query = 'SELECT * FROM %s' % self.table_name
         df = pd.read_sql_query(query, self.engine)
+        algoCode = "'ARS'"
 
         for ID in df['instrumentid']:
             # get the close column data from instrument statistics
@@ -105,6 +106,14 @@ class DataForecast:
             print("Forecasted Close Price (Random in shifted range): ${:.2f}".format(forecast_choice_random))
 
             print("________________________")
+
+            insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
+            forecastClose = forecast_choice_random.__round__(2)
+            predError = 0
+            forecastDate = "'" + dt.datetime(2020, 6, 30).strftime('%Y-%m-%d') + "'"
+            insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
+            self.engine.execute(insert_query)
+
         """
         Step 1: Find the volatility of the stock
         Step 2: Find the trend of the stock
