@@ -3,9 +3,9 @@
 Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | June 29 2020
 
 ## Prerequisite programs:
-	1) Jetbrains PyCharm IDE
-	2) Oracle MySQL Workbench
-	3) Microsoft Power BI
+	1) Jetbrains PyCharm IDE (https://www.jetbrains.com/pycharm/download/#section=windows)
+	2) Oracle MySQL Workbench (https://dev.mysql.com/downloads/workbench/)
+	3) Microsoft Power BI Desktop (https://powerbi.microsoft.com/en-us/desktop/)
 
 ## Part 1: MySQL Workbench
 
