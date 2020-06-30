@@ -38,23 +38,34 @@ class DataForecast:
         query = 'SELECT * FROM %s' % self.table_name
         df = pd.read_sql_query(query, self.engine)
         algoCode = "'ARS'"
+        close_range = 10
+        forecast_range = 10
+
+        # Collect the dates that will be used in the algorithm
+        query = 'SELECT date FROM dbo_instrumentstatistics WHERE instrumentid=1 ' \
+                'ORDER BY Date DESC LIMIT {}'.format(close_range)
+        dates = pd.read_sql_query(query, self.engine)
+        # print them just for testing
+        print(dates)
 
         for ID in df['instrumentid']:
             # get the close column data from instrument statistics
-            query = 'SELECT close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
+            query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid={} ' \
+                    'ORDER BY Date DESC LIMIT {}'.format(ID, close_range)
 
             # save results into a data frame
-            data = pd.read_sql_query(query, self.engine)
+            close_and_date_data = pd.read_sql_query(query, self.engine)
+
 
             # filter to the most recent 5 days
-            data_limited = data['close'].iloc[-5:]
+            # close_data = data['close'].iloc[-5:]
 
             # perform calculations
-            last_close = data_limited.iloc[-1]
-            max_close = data_limited.max()
-            min_close = data_limited.min()
+            last_close = close_and_date_data['close'].iloc[0]
+            max_close = close_and_date_data['close'].max()
+            min_close = close_and_date_data['close'].min()
             diff_close = max_close - min_close
-            avg_close = data_limited.mean()
+            avg_close = close_and_date_data['close'].mean()
             max_deviation = diff_close / avg_close
             forecast_range = last_close * max_deviation
             neutral_lower_range = last_close - forecast_range
@@ -74,8 +85,9 @@ class DataForecast:
                 shifted_upper_range = neutral_upper_range + shift_amount
 
             # print results
-            print("\n\n***** 5-Day Close Statistics for {} *****".format(ID))
-            print("Maximum: ${:.2f}".format(max_close))
+            print("\n\n***** {}-Day Close Statistics for {} *****\n".format(close_range, ID))
+            # print(close_and_date_data)
+            print("\nMaximum: ${:.2f}".format(max_close))
             print("Minimum: ${:.2f}".format(min_close))
             print("Difference: ${:.2f}".format(diff_close))
             print("Current: ${:.2f}".format(last_close))
@@ -90,11 +102,11 @@ class DataForecast:
             print("\n\n***** Shift Forecast Range *****")
             if ascend:
                 print("Current close is {:.2f}% higher than the average".format(up_percent * 100))
-                print("Shifting the forecast range in favor of an increase: {:.2}% of ${:.2f} = ${:.2f}"
+                print("Shifting the forecast range in favor of an increase: {:.2f}% of ${:.2f} = ${:.2f}"
                       .format(up_percent * 100, forecast_range, shift_amount))
             else:
                 print("Current close is {:.2f}% lower than the average".format(down_percent * 100))
-                print("Shifting the forecast range in favor of a decrease: {:.2}% of ${:.2f} = ${:.2f}"
+                print("Shifting the forecast range in favor of a decrease: {:.2f}% of ${:.2f} = ${:.2f}"
                       .format(down_percent * 100, forecast_range, shift_amount))
             print("Shifted Forecast Range: ${:.2f} - ${:.2f}".format(shifted_lower_range, shifted_upper_range))
 
@@ -107,12 +119,15 @@ class DataForecast:
 
             print("________________________")
 
+            # Uncomment to insert
+            '''
             insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
             forecastClose = forecast_choice_random.__round__(2)
             predError = 0
             forecastDate = "'" + dt.datetime(2020, 6, 30).strftime('%Y-%m-%d') + "'"
             insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
             self.engine.execute(insert_query)
+            '''
 
         """
         Step 1: Find the volatility of the stock
