@@ -11,8 +11,9 @@ use GMFSP_db;
 DROP TABLE IF EXISTS dbo_strategymaster;
 create table dbo_strategymaster 
 (          
-strategycode        varchar(20) null,
-strategyname        varchar(50) null
+strategycode        varchar(20),
+strategyname        varchar(50),
+primary key (strategycode) 
 )
 ;
 
@@ -20,11 +21,12 @@ strategyname        varchar(50) null
 DROP TABLE IF EXISTS dbo_algorithmforecast;
 create table dbo_algorithmforecast 
 (          
-forecastdate            date null,
-instrumentid            int   null,
-forecastcloseprice      float null,
-algorithmcode           varchar(50) null,
-prederror               float null
+forecastdate            date,
+instrumentid            int,
+forecastcloseprice      float,
+algorithmcode           varchar(50),
+prederror               float,
+primary key (forecastdate, instrumentid, algorithmcode)
 )
 ;
 
@@ -32,10 +34,11 @@ prederror               float null
 DROP TABLE IF EXISTS dbo_actionsignals;
 create table dbo_actionsignals 
 (          
-date                  date null,
-instrumentid          int   null,
-strategycode          varchar(50) null,
-`signal`              int null
+date                  date,
+instrumentid          int,
+strategycode          varchar(50),
+`signal`              int,
+primary key (date, instrumentid, strategycode)
 )
 ;
 
@@ -43,44 +46,48 @@ strategycode          varchar(50) null,
 DROP TABLE IF EXISTS dbo_algorithmmaster;
 create table dbo_algorithmmaster 
 (          
-algorithmcode         varchar(50) null,
-algorithmname         varchar(50) null
+algorithmcode         varchar(50),
+algorithmname         varchar(50),
+primary key (algorithmcode)
 )
 ;
 
 
 drop table if exists dbo_instrumentmaster;  
 create table dbo_instrumentmaster(
-instrumentid            int null,
-instrumentname          varchar(50) null,
-`type`                  varchar(50) null,
-exchangename            varchar(50) null
+instrumentid            int,
+instrumentname          varchar(50),
+`type`                  varchar(50),
+exchangename            varchar(50),
+primary key (instrumentid)
 )
 ;
 
 
 DROP TABLE IF EXISTS dbo_instrumentstatistics;
 create table dbo_instrumentstatistics(        
-date                    date null,   
-high                    float null,
-low                     float null,
-`open`                  float null,
-`close`                 float null,
-volume                  float null,
-`adj close`             float null,
-instrumentid            int null
+date                    date,   
+high                    float,
+low                     float,
+`open`                  float,
+`close`                 float,
+volume                  float,
+`adj close`             float,
+instrumentid            int,
+primary key (date, instrumentid)
 )
 ;
 
 
 DROP TABLE IF EXISTS dbo_datedim;
 create table dbo_datedim(
-`date`                 date null,
-`year`                 int null,
-`month`                int null,
-qtr                    int null,
-weekend                int null,
-isholiday              int null
+`date`                 date,
+`year`                 int,
+`month`                int,
+qtr                    int,
+weekend                int,
+isholiday              int,
+primary key (date)
 )
 ;
 
@@ -88,43 +95,45 @@ isholiday              int null
 DROP TABLE IF EXISTS dbo_statisticalreturns;
 create table dbo_statisticalreturns
 (           
-`date`                 date null,
-instrumentid           int null,
-strategycode           varchar(50) null,
-positionsize           int null,
-cashonhand             float null,
-portfoliovalue         float null
+`date`                 date,
+instrumentid           int,
+strategycode           varchar(50),
+positionsize           int,
+cashonhand             float,
+portfoliovalue         float,
+primary key (date, instrumentid, strategycode)
 )
 ;
 
 
 DROP TABLE IF EXISTS dbo_engineeredfeatures;
 create table dbo_engineeredfeatures(        
-`date`                       date null,   
-instrumentid                 int null,
-rsi_14                       float null,
-macd_v                       float null,
-macds_v                      float null,
-boll_v                       float null,
-boll_ub_v                    float null,
-boll_lb_v                    float null,
-open_2_sma                   float null,
-wcma                         float null,
-scma                         float null,
-lcma                         float null,
-ltrough                      float null,
-lpeak                        float null,
-highfrllinelong              float null,
-medfrllinelong               float null,
-lowfrllinelong               float null,
-strough                      float null,
-speak                        float null,
-ktrough                      float null,
-kpeak                        float null,
-sema                         float null,
-mema                         float null,
-lema                         float null,
-volume_delta                 float null
+`date`                       date,   
+instrumentid                 int,
+rsi_14                       float,
+macd_v                       float,
+macds_v                      float,
+boll_v                       float,
+boll_ub_v                    float,
+boll_lb_v                    float,
+open_2_sma                   float,
+wcma                         float,
+scma                         float,
+lcma                         float,
+ltrough                      float,
+lpeak                        float,
+highfrllinelong              float,
+medfrllinelong               float,
+lowfrllinelong               float,
+strough                      float,
+speak                        float,
+ktrough                      float,
+kpeak                        float,
+sema                         float,
+mema                         float,
+lema                         float,
+volume_delta                 float,
+primary key (date, instrumentid)
 )
 ;
 
@@ -141,17 +150,22 @@ values (1 , 'GM'   , 'Equity' , 'YAHOO'),
 	   (3 , 'SPY'  , 'Equity' , 'YAHOO'),
 	   (4 , 'XPH'  , 'Equity' , 'YAHOO'),
 	   (5 , 'CARZ' , 'Equity' , 'YAHOO'),
-       (6 , '^TYX' , 'Equity' , 'YAHOO')
+       (6 , '^TYX' , 'Equity' , 'YAHOO'),
+	(7, 'FCAU' , 'Equity' , 'YAHOO'),
+	(8, 'TM' , 'Equity', 'YAHOO'),
+	(9, 'F', 'Equity' , 'YAHOO'),
+	(10, 'HMC' , 'Equity' , 'YAHOO')
 ;
 
 drop table if exists dbo_macroeconmaster;  
 create table dbo_macroeconmaster(
-macroeconcode          varchar(10) null,
-macroeconname          varchar(50) null,
-accesssourcekey        varchar(50) null,
-accesssource		   varchar(50) null,
-datecreated			   date,
-activecode			   varchar(10) null
+macroeconcode          varchar(10),
+macroeconname          varchar(50),
+accesssourcekey        varchar(50),
+accesssource		varchar(50),
+datecreated		 date,
+activecode		varchar(10),
+primary key (macroeconname)
 );
 
 insert into dbo_macroeconmaster
@@ -167,36 +181,39 @@ values ('GDP' , 'GDP'   , 'FRED/NGDPPOT', 'Quandl', 0, 'A'),
 
 DROP TABLE IF EXISTS dbo_macroeconstatistics;
 CREATE TABLE dbo_macroeconstatistics (
-	date			date,
-	statistics		int,
-    macroeconcode	varchar(10) null);
+	date	date,
+	statistics	int,
+    macroeconcode	varchar(10),
+	primary key (macroeconcode)
+    );
 
 DROP TABLE IF EXISTS dbo_macroeconalgorithmforecast;
 CREATE TABLE dbo_macroeconalgorithmforecast(
-forecastdate            date null,
-instrumentid            int  null,
-macroeconcode			varchar(10) null,
-forecastprice           float null,
-algorithmcode           varchar(50) null,
-prederror               float null
+forecastdate            date,
+instrumentid            int,
+macroeconcode		varchar(10),
+forecastprice           float,
+algorithmcode           varchar(50),
+prederror               float,
+primary key (instrumentid)
 );
 
 DROP TABLE IF EXISTS dbo_tempvisualize;
 CREATE TABLE dbo_tempvisualize(
-	forecastdate	date null,
-    instrumentid	int null,
-    forecastcloseprice	float null,
-    algorithmcode	varchar(50) null
+	forecastdate	date,
+    instrumentid	int,
+    forecastcloseprice	float,
+    algorithmcode	varchar(50)
 );
 
 DROP TABLE IF EXISTS dbo_paststatistics;
 create table dbo_paststatistics(        
-date                    date null,   
-high                    float null,
-low                     float null,
-`open`                  float null,
-`close`                 float null,
-volume                  float null,
-`adj close`             float null,
-instrumentid            int null
+date                    date,   
+high                    float,
+low                     float,
+`open`                  float,
+`close`                 float,
+volume                  float,
+`adj close`             float,
+instrumentid            int
 )
