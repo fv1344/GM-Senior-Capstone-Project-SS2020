@@ -13,7 +13,7 @@ import FinsterTab.W2020.AccuracyTest
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
 # Change to true if date dimension table is empty
-reset_date_dim = False
+reset_date_dim = True
 
 
 """
@@ -33,7 +33,7 @@ ticker_symbols = master_data.get_datasources()
 master_data.get_data(ticker_symbols)
 
 my = DataForecast(db_engine, instrument_master)
-my.calculate_william_forecast()
+my.calculate_william_forecast3()
 """
 # Get date data and store in DateDim, replaced the SQL calendar code
 if reset_date_dim:
@@ -126,5 +126,4 @@ simulator.combination_trade_sim()
 
 # buy and hold simulation
 simulator.buy_hold_sim()
-
 """
