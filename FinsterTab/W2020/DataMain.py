@@ -22,14 +22,14 @@ instrument_master = 'dbo_instrumentmaster'
 # Phase 5: Simulation
 
 update_close_stats = False              # Pass 1.1
-reset_date_dim = False                  # Pass 1.2
+reset_date_dim = False                  # Pass 1.2  (Takes maybe 5 minutes)
 update_macro_stats = False              # Pass 1.3
 update_msf_forecast = False             # Fail 3.2
 update_engineered_features = False      # Pass 2
-update_remaining_forecasts = False      # Pass 3.1 (Took nearly an hour I estimate. Saving "old forecasts" is a paradox)
-update_signals = False
-run_simulator = False
-update_ars_forecast = True             # Pass 3.3
+update_remaining_forecasts = False      # Pass 3.1  (Took around 1 hour. Saving "old forecasts" is paradoxical)
+update_signals = False                  # Pass 4    (Took about 5-10 minutes
+run_simulator = False                   # Fail 5    (Took about 10 minutes)
+update_ars_forecast = False             # Pass 3.3
 
 """
     Operations
