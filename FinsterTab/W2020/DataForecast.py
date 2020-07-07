@@ -34,11 +34,18 @@ class DataForecast:
 
     def calculate_william_forecast3(self):
 
-        # Get list of ticker symbols
-        pd.set_option('mode.chained_assignment', None)
-        query = 'SELECT * FROM %s' % self.table_name
+        # retrieve InstrumentsMaster table from database
+        query = 'SELECT * FROM {}'.format(self.table_name)
         df = pd.read_sql_query(query, self.engine)
         algoCode = "'ARS'"
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            algoName = "'AmanRangeShift'"
+            insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
+            self.engine.execute(insert_code_query)
 
         # Number of past values to use to influence each forecast
         num_analyze_days = 30
