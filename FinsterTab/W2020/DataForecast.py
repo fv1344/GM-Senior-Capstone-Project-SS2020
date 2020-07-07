@@ -1555,7 +1555,7 @@ class DataForecast:
         data = pd.read_sql_query(query, self.engine)
 
         # Query to grab the instrumentid and instrument name from the instrumentmaster database table
-        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
+        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster limit 6'
         data1 = pd.read_sql_query(query, self.engine)
 
         # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
@@ -1737,7 +1737,7 @@ class DataForecast:
         data = pd.read_sql_query(query, self.engine)
 
         # Query to grab the instrumentid and instrument name from the instrumentmaster database table
-        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
+        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster LIMIT 6'
         data1 = pd.read_sql_query(query, self.engine)
 
         # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
