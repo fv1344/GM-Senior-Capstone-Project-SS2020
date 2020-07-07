@@ -81,9 +81,6 @@ class DataFetch:
         Get date data to track weekends, holidays, quarter, etc
         Store in database table dbo_DateDim
         """
-        # drop data from table each time program is run
-        truncate_query = 'TRUNCATE TABLE dbo_datedim'
-        self.engine.execute(truncate_query)
 
         # Set the date dimension range
         lowerBound = pd.to_datetime('1947-01-01').date()
