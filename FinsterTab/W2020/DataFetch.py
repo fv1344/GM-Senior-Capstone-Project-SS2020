@@ -73,7 +73,8 @@ class DataFetch:
 
             data.to_sql('dbo_instrumentstatistics', self.engine, if_exists=('replace' if n == 0 else 'append'),
                         index=False, dtype={'date': sal.Date, 'open': sal.FLOAT, 'high': sal.FLOAT, 'low': sal.FLOAT,
-                                            'close': sal.FLOAT, 'adj close': sal.FLOAT, 'volume': sal.FLOAT})
+                                            'close': sal.FLOAT, 'adj close': sal.FLOAT, 'volume': sal.FLOAT,
+                                            'instrumentid': sal.INT})
 
     # Populates the date dimension table. Only needs to be ran once.
     def get_calendar(self):
