@@ -15,15 +15,21 @@ instrument_master = 'dbo_instrumentmaster'
 
 # Change to True to run any of the following
 
-update_close_stats = True
-update_ars_forecast = True
-reset_date_dim = False
-update_macro_stats = False
-update_msf_forecast = False
-update_engineered_features = False
-update_remaining_forecasts = False
+# Phase 1: Set up db
+# Phase 2: Engineered data
+# Phase 3: Predictive data
+# Phase 4: Signals
+# Phase 5: Simulation
+
+update_close_stats = False              # Pass 1.1
+reset_date_dim = False                  # Pass 1.2
+update_macro_stats = False              # Pass 1.3
+update_msf_forecast = False             # Fail 3.2
+update_engineered_features = False      # Pass 2
+update_remaining_forecasts = False      # Pass 3.1 (Took nearly an hour I estimate. Saving "old forecasts" is a paradox)
 update_signals = False
 run_simulator = False
+update_ars_forecast = True             # Pass 3.3
 
 """
     Operations
@@ -31,6 +37,7 @@ run_simulator = False
 
 # Create database connection
 db_engine = DBEngine().mysql_engine()
+
 
 if update_close_stats:
     # Get raw market data
@@ -40,18 +47,18 @@ if update_close_stats:
     # Get data from Yahoo! Finance and store in InstrumentStatistics
     master_data.get_data(ticker_symbols)
 
-if update_ars_forecast:
-    my = DataForecast(db_engine, instrument_master)
-    my.calculate_william_forecast3()
-
 # Get date data and store in DateDim, replaced the SQL calendar code
 if reset_date_dim:
     master_data.get_calendar()
+
+
 
 # Calculate forecast with functions that use macroeconomic indicators
 if update_macro_stats:
     FinsterTab.W2020.AccuracyTest.get_past_data(db_engine)
     DataFetch.macroFetch(db_engine)
+
+
 
 if update_msf_forecast:
     DataForecast.MSF1(db_engine)
@@ -84,6 +91,7 @@ if update_remaining_forecasts:
     # calculate and store XGBoost forecast
     forecast.calculate_xgboost_forecast()
 
+
 if update_signals:
     # Get Raw Data and Technical Indicators
     signals = BuySell(db_engine, instrument_master)
@@ -107,3 +115,7 @@ if run_simulator:
     simulator.combination_trade_sim()
     # buy and hold simulation
     simulator.buy_hold_sim()
+
+if update_ars_forecast:
+    my = DataForecast(db_engine, instrument_master)
+    my.calculate_william_forecast3()
