@@ -82,7 +82,7 @@ volume                  float,
 `adj close`             float,
 instrumentid            int,
 foreign key (date) references dbo_datedim(date),
-foreign key (instrumentid) references dbo_instrumentmaster(instrumentid)
+primary key (instrumentid)
 )
 ;
 
@@ -93,6 +93,7 @@ CREATE TABLE dbo_macroeconstatistics (
 	statistics	int,
 	macroeconname          varchar(50),
    	macroeconcode	varchar(10),
+	foreign key (date) references dbo_datedim(date),
 	foreign key (macroeconname) references dbo_macroeconmaster(macroeconname)
     );
 
@@ -216,7 +217,8 @@ CREATE TABLE dbo_tempvisualize(
     forecastcloseprice	float,
     algorithmcode	varchar(50),
 	foreign key (forecastdate) references dbo_datedim(date),
-	foreign key (instrumentid) references dbo_instrumentmaster(instrumentid)
+	foreign key (instrumentid) references dbo_instrumentmaster(instrumentid),
+	foreign key (algorithmcode) references dbo_algorithmmaster(algorithmcode)
 );
 
 DROP TABLE IF EXISTS dbo_paststatistics;
@@ -229,5 +231,6 @@ low                     float,
 volume                  float,
 `adj close`             float,
 instrumentid            int,
-foreign key (date) references dbo_datedim(date)
+foreign key (date) references dbo_datedim(date),
+foreign key (instrumentid) references dbo_instrumentmaster(instrumentid)
 )
