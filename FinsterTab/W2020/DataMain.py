@@ -118,4 +118,5 @@ if run_simulator:
 
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
-    my.calculate_william_forecast3()
+    my.calculate_william_forecast4(5, 5, '2020-07-08', True)
+    # my.calculate_william_forecast3()
