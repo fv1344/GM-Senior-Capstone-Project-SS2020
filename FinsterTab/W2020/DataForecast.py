@@ -17,6 +17,14 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 import random as rand
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, LSTM
+from tensorflow.keras import Sequential
+from sklearn.preprocessing import *
+import math
 
 
 # class declaration and definition

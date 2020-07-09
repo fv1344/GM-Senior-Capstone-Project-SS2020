@@ -30,7 +30,7 @@ update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving
 update_signals = False                  # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
 update_ars_forecast = False             # Pass 3.3
-update_fjf_forecast = False
+update_fjf_forecast = True
 """
     Operations
 """
