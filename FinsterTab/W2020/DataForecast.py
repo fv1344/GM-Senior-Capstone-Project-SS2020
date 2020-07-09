@@ -17,6 +17,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 import random as rand
+from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_squared_error
 
 
 # class declaration and definition
@@ -31,6 +33,193 @@ class DataForecast:
         """
         self.engine = engine
         self.table_name = table_name
+
+    def calculate_william_forecast4(self, past_amount, future_amount, most_future_date, is_test=False):
+
+        # retrieve InstrumentsMaster table from database
+        query = 'SELECT * FROM {}'.format(self.table_name)
+        df = pd.read_sql_query(query, self.engine)
+        algoCode = "'ARS'"
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            algoName = "'AmanRangeShift'"
+            insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
+            self.engine.execute(insert_code_query)
+
+        # Collect "future_amount" dates and save into "future_dates".
+        query = 'SELECT date FROM dbo_datedim WHERE date <= "{}" AND weekend = 0 AND isholiday = 0' \
+                ' ORDER BY Date DESC LIMIT {}'\
+            .format(most_future_date, future_amount)
+        # Future dates, but need in ascending order
+        future_dates = pd.read_sql_query(query, self.engine)
+        future_dates = future_dates.iloc[::-1]
+        future_dates = future_dates.reset_index(drop=True)
+        print("***** FUTURE DATES *****")
+        print(future_dates)
+
+        # Collect the most recent past_date_marker to use for analysis
+        query = 'SELECT date FROM dbo_datedim WHERE date < "{}" AND weekend = 0 AND isholiday = 0' \
+                ' ORDER BY Date DESC LIMIT 1' \
+            .format(future_dates['date'].iloc[0], past_amount)
+        past_date_marker = pd.read_sql_query(query, self.engine)
+        print("***** PAST DATE MARKER *****")
+        print(past_date_marker)
+
+
+        # Loop through each instrument one at a time
+        # This outer loop section is visited once for each instrument, before their first forecast
+        for ID in df['instrumentid']:
+
+            # SET PARAMETERS BEFORE EACH INSTRUMENT'S FIRST FORECAST
+
+            # Get "past_amount" of real closing values and save into "close_and_date_data"
+            query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid={} AND date<="{}" ' \
+                'ORDER BY Date DESC LIMIT {}'.format(ID, past_date_marker['date'].iloc[0], past_amount)
+            close_and_date_data = pd.read_sql_query(query, self.engine)
+
+
+            # Save "global" values for each instrument to use
+            real_max = close_and_date_data['close'].max()
+            real_min = close_and_date_data['close'].min()
+            real_avg = close_and_date_data['close'].mean()
+            real_range = real_max - real_min
+            real_max_deviation = real_range / real_avg
+            print("Real Max: ${}".format(real_max))
+            print("Real Min: ${}".format(real_min))
+            print("Real Avg: ${:.2f}".format(real_avg))
+            print("Real Range: ${:.2f}".format(real_range))
+            print("Real Max Deviation: {:.2f}%".format(real_max_deviation*100))
+
+            # Set influence values to default value at the beginning od each instruments forecast cycle
+            influence_up = False
+            influence_down = False
+
+            # Loop through the future, 1 day at a time (day stores the date)
+            for day in future_dates['date']:
+                print("CURRENT DAY: {}".format(day))
+
+                # PERFORM CALCULATIONS
+                # Newest forecasts are inserted into the front, so most recent close is at index 0
+                last_close = close_and_date_data['close'].iloc[0]
+                max_close = close_and_date_data['close'].iloc[:past_amount].max()
+                min_close = close_and_date_data['close'].iloc[:past_amount].min()
+                avg_close = close_and_date_data['close'].iloc[:past_amount].mean()
+                # The amount of dollars the forecast is allowed to range between
+                forecast_price_range = last_close * real_max_deviation
+                # The neutral limits of where the forecast can land between
+                neutral_lower_range = last_close - (forecast_price_range / 2)
+                neutral_upper_range = last_close + (forecast_price_range / 2)
+
+                # Shift Forecast Range
+                # If the last close price is trending lower than the average
+                if last_close < avg_close:
+                    ascend = False
+                    # How severe is it down
+                    down_percent = (avg_close - last_close) / avg_close
+                    # Adjust the forecast_price_range to the same percent as the trend
+                    shift_amount = forecast_price_range * down_percent
+                    shifted_lower_range = neutral_lower_range - shift_amount
+                    shifted_upper_range = neutral_upper_range - shift_amount
+                # If the last close price is trending higher than the average
+                else:
+                    ascend = True
+                    # How severe is it up
+                    up_percent = (last_close - avg_close) / avg_close
+                    # Adjust the forecast_price_range to the same percent as the trend
+                    shift_amount = forecast_price_range * up_percent
+                    shifted_lower_range = neutral_lower_range + shift_amount
+                    shifted_upper_range = neutral_upper_range + shift_amount
+
+                # print results
+                print("\n\n***** {}-Day Close Statistics for {} *****\n".format(past_amount, ID))
+                # print(close_and_date_data)
+                print("\nMaximum: ${:.2f}".format(max_close))
+                print("Minimum: ${:.2f}".format(min_close))
+                print("Current: ${:.2f}".format(last_close))
+                print("Average: ${:.2f}".format(avg_close))
+
+                print("\n\n***** Forecast Range *****")
+                print("Maximum Deviation Constant: {:.2f}%".format(real_max_deviation * 100))
+                print("{:.2f}% of ${:.2f} = ${:.2f} of forecast range"
+                      .format(real_max_deviation * 100, last_close, forecast_price_range))
+                print("Neutral Forecast Range: ${:.2f} - ${:.2f}".format(neutral_lower_range, neutral_upper_range))
+
+                print("\n\n***** Shift Forecast Range *****")
+                if ascend:
+                    print("Current close is {:.2f}% higher than the average".format(up_percent * 100))
+                    print("Shifting the forecast range in favor of an increase: {:.2f}% of ${:.2f} = ${:.2f}"
+                          .format(up_percent * 100, forecast_price_range, shift_amount))
+                else:
+                    print("Current close is {:.2f}% lower than the average".format(down_percent * 100))
+                    print("Shifting the forecast range in favor of a decrease: {:.2f}% of ${:.2f} = ${:.2f}"
+                          .format(down_percent * 100, forecast_price_range, shift_amount))
+                print("Shifted Forecast Range: ${:.2f} - ${:.2f}".format(shifted_lower_range, shifted_upper_range))
+
+                # Generate Forecasts
+                print("\n\n***** Generate Forecast Close Price *****")
+                forecast_choice_average = (shifted_upper_range + shifted_lower_range) / 2
+                rand.seed(datetime.now())
+                # The last forecast was below the 30 day minimum. Force an increase
+                if influence_up:
+                    forecast_choice_random = rand.uniform(last_close, last_close + forecast_price_range)
+                    print("Forced Increase")
+                # The last forecast was above the 30 day maximum. Force a decrease
+                elif influence_down:
+                    forecast_choice_random = rand.uniform(shifted_lower_range - forecast_price_range, last_close)
+                    print("Forced Decrease")
+                else:
+                    forecast_choice_random = rand.uniform(shifted_lower_range, shifted_upper_range)
+                    print("Regular shifted range")
+                print("Forecasted Close Price for 07/01/2020 (Average in shifted range): ${:.2f}".format(
+                    forecast_choice_average))
+                print("Forecasted Close Price for 07/01/2020 (Random in shifted range): ${:.2f}".format(
+                    forecast_choice_random))
+
+                # Adjust next run based on forecast
+                if forecast_choice_random < real_min:
+                    influence_up = True
+                    print("Next will be forced increase")
+                elif forecast_choice_random > real_max:
+                    influence_down = True
+                    print("Next will be forced decrease")
+                else:
+                    influence_up = False
+                    influence_down = False
+                    print("Next will be normal")
+
+                print("________________________")
+
+                # Append new forecast to beginning of "close_date_and_data"
+                new_forecast = pd.DataFrame({'date': day, 'close': forecast_choice_random.__round__(2)}, index=[0])
+                close_and_date_data = pd.concat([new_forecast, close_and_date_data]).reset_index(drop=True)
+                print(close_and_date_data.iloc[0:30])
+
+                """
+                # insert into database
+                insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}", {}, {}, {}, {})'
+                forecastClose = forecast_choice_random.__round__(2)
+                predError = 0
+                forecastDate = day
+                insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
+                self.engine.execute(insert_query)
+                """
+            if is_test:
+                print("***** FORECASTED CLOSE VALUES")
+                print(close_and_date_data.iloc[0:future_amount])
+                print("***** ACTUAL CLOSE VALUES")
+                query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid={} AND date<="{}" ' \
+                        'ORDER BY Date DESC LIMIT {}'.format(ID, most_future_date, future_amount)
+                real_close_and_date_data = pd.read_sql_query(query, self.engine)
+                print(real_close_and_date_data)
+                print("Mean Absolute Percentage Error: {}"
+                      .format(mean_absolute_error(real_close_and_date_data['close'],
+                                                  close_and_date_data['close'].iloc[0:future_amount])))
+                print("Mean Squared Error: {}"
+                      .format(mean_squared_error(real_close_and_date_data['close'],
+                                                 close_and_date_data['close'].iloc[0:future_amount])))
 
     def calculate_william_forecast3(self):
 
@@ -186,7 +375,7 @@ class DataForecast:
                 new_forecast = pd.DataFrame({'date': day, 'close': forecast_choice_random.__round__(2)}, index=[0])
                 close_and_date_data = pd.concat([new_forecast, close_and_date_data]).reset_index(drop=True)
                 print(close_and_date_data.iloc[0:30])
-
+                """
                 # insert into database
                 insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}", {}, {}, {}, {})'
                 forecastClose = forecast_choice_random.__round__(2)
@@ -194,6 +383,7 @@ class DataForecast:
                 forecastDate = day
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
+                """
 
     """
         PROBLEM: Allowing the maximum deviation to be influenced by the forecasted values means that the percentage will
