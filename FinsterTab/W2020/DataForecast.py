@@ -17,6 +17,14 @@ from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 import random as rand
+import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+import keras
+from keras.models import Sequential
+from keras.layers import Dense, LSTM
+from tensorflow.keras import Sequential
+from sklearn.preprocessing import *
+import math
 
 
 # class declaration and definition
@@ -31,6 +39,374 @@ class DataForecast:
         """
         self.engine = engine
         self.table_name = table_name
+
+    def FJF(self):
+
+        '''Frino Jais Function(FJF) for stock market forecasting'''
+        '''Uses Deep Learning and Neural Networks for forecast using the previous 90 days of close prices for each stock'''
+        query = 'SELECT * FROM {}'.format(self.table_name)
+        df = pd.read_sql_query(query, self.engine)
+
+        algoCode = "'FJF'"  # Master `algocode` for improved prediction from previous group, user created codes
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            algoName = "'FJF'"
+            insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
+            self.engine.execute(insert_code_query)
+
+        # loop through each ticker symbol
+        for ID in df['instrumentid']:
+            # remove all future prediction dates - these need to be recalculated daily
+            remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND prederror=0 AND ' \
+                                  'instrumentID={}'.format(algoCode, ID)
+            self.engine.execute(remove_future_query)
+
+            # find the latest forecast date
+            date_query = 'SELECT ForecastDate FROM dbo_AlgorithmForecast WHERE AlgorithmCode={} AND InstrumentID={} ' \
+                         'ORDER BY ForecastDate DESC LIMIT 1'.format(algoCode, ID)
+            latest_date = pd.read_sql_query(date_query, self.engine)  # most recent forecast date calculation
+
+            # if table has forecast prices already find the latest one and delete it
+            # need to use most recent data for today if before market close at 4pm
+            if not latest_date.empty:
+                latest_date_str = "'" + str(latest_date['ForecastDate'][0]) + "'"
+                delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} AND ' \
+                               'forecastdate={}'.format(algoCode, ID, latest_date_str)
+                self.engine.execute(delete_query)
+
+            # get raw price data from database
+            data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY date ASC' % ID
+            data = pd.read_sql_query(data_query, self.engine) # close values in dataframe
+
+            # if else to make writing stock names easier
+            if (ID==1):
+                stockName="GM"
+            elif (ID==2):
+                stockName="PFE"
+            elif (ID==3):
+                stockName="SPY"
+            elif (ID==4):
+                stockName="XPH"
+            elif (ID==5):
+                stockName="CARZ"
+            else:
+                stockName="^TYZ"
+
+            # i want to get just the close values from the instrument stats table
+            closeData = data.filter(['close'])
+            # these close values will be converted into a numpy 2D array for easier processing
+            closeDataSet = closeData.values
+            # would like to train 80% of data, standard training rate and round up if it is a decimal
+            trainingLength = math.ceil(len(closeDataSet) * 0.8) # for the 80:20 training:testing model
+
+            #Scale the data, this is a method that must be used when using neural networks
+            #input data is being preprocessed
+            dataScaler = MinMaxScaler(feature_range=(0,1)) # data will be scaled in values from 0 to 1 which is easier to be read by keras
+            scaledData = dataScaler.fit_transform(closeDataSet) # transform close data set to compute the min and max values to be used to scaling
+
+            #Create training data set
+            trainingDataSet = scaledData[0:trainingLength, :] #create scaled training data set which will contain the values from index 0 to training length
+
+            pastTrain=[] #independent training variables, these will be the stored close values used to train the model
+            futureTrain=[] #dependent training varaibles, this array will store the prediction
+
+            #Create a for loop to pull from the last 90 days
+            #every time the for loop is ran, a prediction value will be stored into future train until the end of the training data set length is reached
+            for i in range (90, len(trainingDataSet)): #only looking at training data set now
+                pastTrain.append(trainingDataSet[i-90:i,0]) # store the past scaled values from index 0 to 89
+                futureTrain.append(trainingDataSet[i, 0]) # will contain 91st values indexed at 90 this will be forecast values to be trained
+
+            pastTrain=np.array(pastTrain) # array that hold the past 90 close prices
+            futureTrain=np.array(futureTrain) # will contain the "perfect forecast price"
+            #print(pastTrain.shape)
+            # Data must be reshaped because keras requires a 3-d model
+            pastTrain=np.reshape(pastTrain, (pastTrain.shape[0], 90, 1)) # (Number of samples, number of timesteps, number of features)
+
+            #LSTM MODEL
+            #Have to build layers for the LSTM model
+            lstmModel =Sequential() # the sequential class in keras takes input and produces outputs based on layers
+            lstmModel.add(LSTM(50, return_sequences=True, input_shape=(90,1))) # giving the first layer our past 90 day input
+            lstmModel.add(LSTM(50, return_sequences=False)) # rule of thumb to follow: sample size/2
+            lstmModel.add(Dense(30)) #outputs a shape of 25 # giving outpupt predictions
+            lstmModel.add(Dense(1)) #output a shape of 1
+
+            # Declare optimizer and loss function
+            #optimizer adaptive moment estimation
+            lstmModel.compile(optimizer = 'adam', loss = 'mean_squared_error') # optimizer used to improve loss function and loss function is used to test accuracy
+
+            #Training
+            # batch size is the group of data
+            # epoch is how many times the from start to end
+            # stochastic gradient descent
+            print("Learning data for "+ stockName+". Please wait...")
+            lstmModel.fit(pastTrain,futureTrain, batch_size=1, epochs=1)
+
+            #training is done now
+
+            #Create testing data  (want to try to predict the last 20% of data)
+            testData=scaledData[trainingLength-90:,:] # this array will contain values from the current row number 1118 to row 1208 (90 days prediction)
+
+            pastTest=[] #past 90 values
+            futureTest=closeDataSet[trainingLength:,:] #prediction values stored here from 1208 onwards
+
+            for i in range(90, len(testData)):
+                pastTest.append(testData[i-90:i, 0]) #store the last 90 values to pastTest
+
+
+            pastTest=np.array(pastTest) #convert to numpy array
+
+            pastTest=np.reshape(pastTest,(pastTest.shape[0],90,1)) #reshape xTest to 3-d format so it is easier to be read by keras
+
+            forecastPrices =lstmModel.predict(pastTest) # forecast prices based on past test values (last 90 days)
+            forecastPrices = dataScaler.inverse_transform(forecastPrices)
+
+            # Root mean squared error test
+            RMSE = np.sqrt(np.mean((forecastPrices - futureTest) ** 2))
+
+            print("")
+            print("The root mean squared error for the model's prediction to actual close values is: " + str(RMSE))
+            print("")
+
+            '''print("")
+            print("The mean squared error for " +stockName+" is: "+str(RMSE))
+
+            print("Forecast prices: ")
+            forecastDf = pd.DataFrame(data=forecastPrices)
+            print(forecastDf)
+            print("Y test: ")
+            print(yTest)
+
+            print("These are forecast prices over the last " + str(len(forecastPrices)) + " days")'''
+
+            #trying something different
+            last90days = closeData[-90:].values # close data from the last 90 days
+
+            scaledLast90Days = dataScaler.transform(last90days)
+            independentTest=[]
+            independentTest.append(scaledLast90Days)
+            independentTest=np.array(independentTest)
+            independentTest=np.reshape(independentTest,(independentTest.shape[0],independentTest.shape[1],1))
+            predPrice=lstmModel.predict(independentTest)
+            predPrice=dataScaler.inverse_transform(predPrice)
+            print("")
+            print("The estimated stock price for " + stockName +" on ")
+            tomorrowDate =dt.date.today() + dt.timedelta(days=1)
+            print(dt.date.today()+dt.timedelta(days=1))
+            print("is: " +str(predPrice))
+            print("")
+
+
+
+
+
+
+    def FJF2(self):
+
+        '''Frino Jais Function(FJF) for stock market forecasting'''
+        '''Uses Deep Learning and Neural Networks for forecast using the previous 90 days of close prices for each stock'''
+        query = 'SELECT * FROM {}'.format(self.table_name)
+        df = pd.read_sql_query(query, self.engine)
+
+        algoCode = "'FJF'"  # Master `algocode` for improved prediction from previous group, user created codes
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            algoName = "'FrinoJaisFunction'"
+            insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
+            self.engine.execute(insert_code_query)
+
+        # loop through each ticker symbol
+        for ID in df['instrumentid']:
+            # remove all future prediction dates - these need to be recalculated daily
+            remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND prederror=0 AND ' \
+                                  'instrumentID={}'.format(algoCode, ID)
+            self.engine.execute(remove_future_query)
+
+            # find the latest forecast date
+            date_query = 'SELECT ForecastDate FROM dbo_AlgorithmForecast WHERE AlgorithmCode={} AND InstrumentID={} ' \
+                         'ORDER BY ForecastDate DESC LIMIT 1'.format(algoCode, ID)
+            latest_date = pd.read_sql_query(date_query, self.engine)  # most recent forecast date calculation
+
+            # if table has forecast prices already find the latest one and delete it
+            # need to use most recent data for today if before market close at 4pm
+            if not latest_date.empty:
+                latest_date_str = "'" + str(latest_date['ForecastDate'][0]) + "'"
+                delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND instrumentid={} AND ' \
+                               'forecastdate={}'.format(algoCode, ID, latest_date_str)
+                self.engine.execute(delete_query)
+
+            # get raw price data from database
+            data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY date ASC' % ID
+            data = pd.read_sql_query(data_query, self.engine) # close values in dataframe
+
+            # if else to make writing stock names easier
+            if (ID==1):
+                stockName="GM"
+            elif (ID==2):
+                stockName="PFE"
+            elif (ID==3):
+                stockName="SPY"
+            elif (ID==4):
+                stockName="XPH"
+            elif (ID==5):
+                stockName="CARZ"
+            else:
+                stockName="^TYZ"
+
+            # i want to get just the close values from the instrument stats table
+            closeData = data.filter(['close'])
+            # these close values will be converted into a numpy 2D array for easier processing
+            closeDataSet = closeData.values
+            # would like to train 80% of data, standard training rate and round up if it is a decimal
+            trainingLength = math.ceil(len(closeDataSet) * 0.8) # for the 80:20 training:testing model
+
+            #Scale the data, this is a method that must be used when using neural networks
+            #input data is being preprocessed
+            dataScaler = MinMaxScaler(feature_range=(0,1)) # data will be scaled in values from 0 to 1 which is easier to be read by keras
+            scaledData = dataScaler.fit_transform(closeDataSet) # transform close data set to compute the min and max values to be used to scaling
+
+            #Create training data set
+            trainingDataSet = scaledData[0:trainingLength, :] #create scaled training data set which will contain the values from index 0 to training length
+
+            pastTrain=[] #independent training variables, these will be the stored close values used to train the model
+            futureTrain=[] #dependent training varaibles, this array will store the prediction
+
+            #Create a for loop to pull from the last 90 days
+            #every time the for loop is ran, a prediction value will be stored into future train until the end of the training data set length is reached
+            for i in range (90, len(trainingDataSet)): #only looking at training data set now
+                pastTrain.append(trainingDataSet[i-90:i,0]) # store the past scaled values from index 0 to 89
+                futureTrain.append(trainingDataSet[i, 0]) # will contain 91st values indexed at 90 this will be forecast values to be trained
+
+            pastTrain=np.array(pastTrain) # array that hold the past 90 close prices
+            futureTrain=np.array(futureTrain) # will contain the "perfect forecast price"
+            print(pastTrain.shape)
+            # Data must be reshaped because keras requires a 3-d model
+            pastTrain=np.reshape(pastTrain, (pastTrain.shape[0], 90, 1)) # (Number of samples, number of timesteps, number of features)
+
+            #LSTM MODEL
+            #Have to build layers for the LSTM model
+            lstmModel =Sequential() # the sequential class in keras takes input and produces outputs based on layers
+            lstmModel.add(LSTM(50, return_sequences=True, input_shape=(90,1))) # giving the first layer our past 90 day input
+            lstmModel.add(LSTM(50, return_sequences=False)) # rule of thumb to follow: sample size/2
+            lstmModel.add(Dense(30)) #outputs a shape of 25 # giving outpupt predictions
+            lstmModel.add(Dense(1)) #output a shape of 1
+
+            # Declare optimizer and loss function
+            #optimizer adaptive moment estimation
+            lstmModel.compile(optimizer = 'adam', loss = 'mean_squared_error') # optimizer used to improve loss function and loss function is used to test accuracy
+
+            #Training
+            # batch size is the group of data
+            # epoch is how many times the from start to end
+            # stochastic gradient descent
+            print("Learning data for "+ stockName+". Please wait...")
+            lstmModel.fit(pastTrain,futureTrain, batch_size=1, epochs=1)
+
+            #training is done now
+
+            #Create testing data  (want to try to predict the last 20% of data)
+            testData=scaledData[trainingLength-90:,:] # this array will contain values from the current row number 1118 to row 1208 (90 days prediction)
+
+            pastTest=[] #past 90 values
+            futureTest=closeDataSet[trainingLength:,:] #prediction values stored here from 1208 onwards
+
+            for i in range(90, len(testData)):
+                pastTest.append(testData[i-90:i, 0]) #store the last 90 values to pastTest
+
+
+            pastTest=np.array(pastTest) #convert to numpy array
+
+            pastTest=np.reshape(pastTest,(pastTest.shape[0],90,1)) #reshape xTest to 3-d format so it is easier to be read by keras
+
+            forecastPrices =lstmModel.predict(pastTest) # forecast prices based on past test values (last 90 days)
+            forecastPrices = dataScaler.inverse_transform(forecastPrices)
+
+            # Root mean squared error test
+            RMSE = np.sqrt(np.mean((forecastPrices - futureTest) ** 2))
+
+            print("")
+            print("The root mean squared error for the model's prediction to actual close values is: " + str(RMSE))
+            print("")
+
+            last90days = closeData[-90:].values  # close data from the last 90 days
+
+            futureForecast=[]
+            fcDate=datetime.now()
+            i=0
+
+            #loop to output next 30 days (WORKS)
+            while (i<30):
+                scaledLast90Days = dataScaler.transform(last90days)  # transform he values to be between 0 and 1
+                independentTest = []  # create an empty list to store last 90 days
+                independentTest.append(scaledLast90Days)  # store the last 90 days of scaled values
+                independentTest = np.array(independentTest)  # change the list in to an array
+                independentTest = np.reshape(independentTest,(independentTest.shape[0], independentTest.shape[1], 1))  # 2d to 3d
+                nextDayForecast = lstmModel.predict(independentTest)  # get prediction value for next day
+                nextDayForecast = dataScaler.inverse_transform(nextDayForecast)  # transform scaled value to normal format
+                futureForecast.extend(nextDayForecast.tolist())  # add new value to future forecast list
+                last90days=np.append(last90days,nextDayForecast[0]) # add new values to 90 day set
+                last90days=last90days[1:] # move one index up to the previous 90 values that now include the forecast price to predict the next price
+                last90days=last90days.reshape(-1,1) #reshape to 2d
+
+                insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}",{},{},{},{})'
+                forecastClose=nextDayForecast
+                predError=0
+                fcDate=fcDate + timedelta(days=1)
+                forecastDate=fcDate.strftime("%Y-%m-%d")
+                forecastClose = forecastClose.flatten() # have to pull the value out of the 2d array
+                insert_query=insert_query.format(forecastDate,ID,forecastClose[0],algoCode,predError)
+                self.engine.execute(insert_query)
+
+
+                i=i+1
+
+
+
+            '''
+                    if(len(tempInput)>90): # after else statement tempInput will be of size 91
+                    last90days=np.array(tempInput[1:]) # we will shift one index up to include the forecasted price in the next prediction
+                    print("{} day input {}".format(i,last90days))
+                    last90days=last90days.reshape(1,-1) #reshape to 2d
+                    last90days= last90days.reshape(1,90,1) #reshape to 3d
+                    nextDayForecast=lstmModel.predict(last90days) # get next day forecast
+                    print("{} day output {}".format(i,nextDayForecast))
+                    tempInput.extend(nextDayForecast[0].tolist()) # add forecasted value to acting 90 day set
+                    tempInput=tempInput[1:] #move one index forward
+                    futureForecast.extend(nextDayForecast.tolist()) #add the next forecasted value to the forecast set
+                    i=i+1
+                else:
+                    scaledLast90Days = dataScaler.transform(last90days) #transform he values to be between 0 and 1
+                    independentTest=[] #create an empty list to store last 90 days
+                    independentTest.append(scaledLast90Days) #store the last 90 days of scaled values
+                    independentTest=np.array(independentTest) # change the list in to an array
+                    independentTest=np.reshape(independentTest,(independentTest.shape[0],independentTest.shape[1],1)) # 2d to 3d
+                    nextDayForecast=lstmModel.predict(independentTest) # get prediction value for next day
+                    nextDayForecast=dataScaler.inverse_transform(nextDayForecast) # transform scaled value to normal format
+                    tempInput.extend(nextDayForecast) # add new value to existing 90 ay data set
+                    futureForecast.extend(nextDayForecast.tolist()) # add new value to future forecast list
+                    i=i+1
+                    '''
+
+
+            '''
+                    last90days=last90days.reshape(1,90,1)
+                    nextDayForecast=lstmModel.predict(last90days) #get the next day forecast using previous 90 values
+                    print(nextDayForecast[0]) # why is this showing a weird prediction?
+                    tempInput.extend(nextDayForecast[0].tolist())# store the forecasted value into our acting 90 day set
+                    print(len(tempInput))
+                    futureForecast.extend(nextDayForecast.tolist()) # store the forecasted value into its own set
+                    i=i+1
+                    '''
+
+            print("Future forecast is: ")
+            print(futureForecast)
+            print(len(futureForecast))
+
 
     def calculate_william_forecast3(self):
 
