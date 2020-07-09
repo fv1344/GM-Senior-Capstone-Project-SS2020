@@ -6,7 +6,9 @@ import sqlalchemy as sal                          # SQL toolkit, Object-Relation
 from pandas.tseries.holiday import get_calendar, HolidayCalendarFactory, GoodFriday  # calendar module to use a pre-configured calendar
 import quandl
 from fredapi import Fred
+import datapungibea as dpb #library for pulling GDP from the BEA database
 
+beadata= dpb.data("D332F410-2195-498F-9CA9-5100FEC8B4B6")
 fred = Fred(api_key='26a5ada544f2b9589d92bac5f792dc5d')
 
 """

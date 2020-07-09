@@ -30,7 +30,7 @@ update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving
 update_signals = False                  # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
 update_ars_forecast = False             # Pass 3.3
-
+update_fjf_forecast = False
 """
     Operations
 """
@@ -119,3 +119,8 @@ if run_simulator:
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
     my.calculate_william_forecast3()
+
+if update_fjf_forecast:
+    my = DataForecast(db_engine, instrument_master)
+    #my.FJF1()
+    my.FJF2()
