@@ -29,7 +29,7 @@ update_engineered_features = False      # Pass 2
 update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
 update_signals = False                  # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
-update_ars_forecast = False             # Pass 3.3
+update_ars_forecast = True             # Pass 3.3
 
 """
     Operations
@@ -118,5 +118,5 @@ if run_simulator:
 
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
-    my.calculate_william_forecast4(5, 5, '2020-07-08', True)
-    # my.calculate_william_forecast3()
+    # (first forecast date, last forecast date, history amount, average technique, insert into db, test, show output)
+    my.calculate_william_forecast4('2019-05-23', '2019-06-23', 30, False, True, False, False)
