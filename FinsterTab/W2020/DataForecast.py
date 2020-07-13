@@ -200,9 +200,9 @@ class DataForecast:
                     if show_output:
                         print("Forced Decrease")
                     if average:
-                        forecast_choice_average = ((shifted_lower_range - forecast_price_range) + last_close) / 2
+                        forecast_choice_average = ((last_close - forecast_price_range) + last_close) / 2
                     else:
-                        forecast_choice_random = rand.uniform(shifted_lower_range - forecast_price_range, last_close)
+                        forecast_choice_random = rand.uniform(last_close - forecast_price_range, last_close)
                 else:
                     if show_output:
                         print("Regular Shifted Range")
@@ -213,9 +213,9 @@ class DataForecast:
 
                 if show_output:
                     if average:
-                        print("Forecasted Close Price (Average) for {}: ${:.2f}".format(forecast_choice_average))
+                        print("Forecasted Close Price (Average) for {}: ${:.2f}".format(day, forecast_choice_average))
                     else:
-                        print("Forecasted Close Price (Random) for {}: ${:.2f}".format(forecast_choice_random))
+                        print("Forecasted Close Price (Random) for {}: ${:.2f}".format(day, forecast_choice_random))
 
                 if average:
                     # Adjust next run based on forecast
@@ -273,23 +273,36 @@ class DataForecast:
                     insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                     self.engine.execute(insert_query)
 
-            if is_test:
-                print("***** FORECASTED CLOSE VALUES for {} *****".format(ID))
-                print(close_and_date_data.iloc[0:forecast_amount])
-                print("***** ACTUAL CLOSE VALUES for {}*****".format(ID))
+            if is_test and ID == 1:
+                print("\n\n\n***** FORECASTED CLOSE VALUES for {} *****".format(ID))
+                forecasted_date_and_close = close_and_date_data.iloc[0:forecast_amount]
+                print(forecasted_date_and_close)
+
+                forecasted_close = np.array(forecasted_date_and_close['close'])
+
+                print("\n***** ACTUAL CLOSE VALUES for {}*****".format(ID))
                 query = 'SELECT date, close FROM dbo_instrumentstatistics ' \
-                        'WHERE instrumentid={} AND date>="{}" AND date<="{}" ORDER BY date DESC'\
+                        'WHERE instrumentid={} AND date>="{}" AND date<="{}" ORDER BY date DESC' \
                     .format(ID, forecast_first_date, forecast_last_date)
-                real_close_and_date_data = pd.read_sql_query(query, self.engine)
-                print(real_close_and_date_data)
-                print("\n***** ERROR CALCULATIONS *****")
-                mape = mean_absolute_error(real_close_and_date_data['close'],
-                                           close_and_date_data['close'].iloc[0:forecast_amount])
-                mse = mean_squared_error(real_close_and_date_data['close'],
-                                         close_and_date_data['close'].iloc[0:forecast_amount])
-                rmse = sqrt(mse)
-                print("Mean Absolute Percentage Error: {}".format(mape))
-                print("Root Mean Squared Error: {}".format(rmse))
+                actual_date_and_close = pd.read_sql_query(query, self.engine)
+                print(actual_date_and_close)
+
+                actual_close = np.array(actual_date_and_close['close'])
+
+                print("\n***** ERROR CALCULATIONS FOR {} *****".format(ID))
+                # Mean Absolute Error
+                mae = mean_absolute_error(actual_close, forecasted_close)
+
+                # Mean Absolute Percentage Error
+                errors = []
+                for i in range(len(actual_close)):
+                    abs_diff = np.abs(actual_close[i] - forecasted_close[i])
+                    percent_error = abs_diff/actual_close[i]
+                    errors.append(percent_error)
+                mape = np.average(errors)*100
+
+                print("Mean Absolute Error: ${:.2f}".format(mae))
+                print("Mean Absolute Percentage Error: {:.2f}%".format(mape))
 
     def calculate_william_forecast3(self):
 
