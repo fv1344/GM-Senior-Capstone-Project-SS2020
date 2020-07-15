@@ -26,7 +26,7 @@ update_engineered_features = False      # Pass 2
 update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
 update_signals = False                  # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
-update_ars_forecast = True             # Pass 3.3
+update_ars_forecast = False             # Pass 3.3
 
 """
     OPERATIONS BELOW
@@ -45,7 +45,8 @@ if update_close_stats:
 
 # Get date data and store in DateDim, replaced the SQL calendar code
 if reset_date_dim:
-    master_data.get_calendar()
+    reset_calender = DataFetch(db_engine, instrument_master)
+    reset_calender.get_calendar("2000-01-01", "2025-12-31")
 
 # Calculate forecast with functions that use macroeconomic indicators
 if update_macro_stats:
@@ -110,4 +111,4 @@ if run_simulator:
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
     # (first forecast date, last forecast date, history amount, average technique, insert into db, test, show output)
-    my.calculate_william_forecast4('2020-06-13', '2020-07-13', 30, False, True, True, False)
+    my.calculate_william_forecast4('2020-06-13', '2020-07-13', 30, True, True, True, False)
