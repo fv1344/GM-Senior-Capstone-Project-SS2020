@@ -156,12 +156,20 @@ class TradingSimulator:
         # get ticker symbols from database
         query = 'SELECT * FROM %s' % self.table_name
         df = pd.read_sql_query(query, self.engine)
-        code = "'BuyHold'"
+        strategyCode = "'BuyHold'"
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_strategymaster WHERE strategycode=%s' % strategyCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            strategyName = "'BuyHold'"
+            insert_code_query = 'INSERT INTO dbo_strategymaster VALUES({},{})'.format(strategyCode, strategyName)
+            self.engine.execute(insert_code_query)
 
         # run simulation for each ticker symbol
         for ID in df['instrumentid']:
             delete_query = 'DELETE FROM dbo_statisticalreturns WHERE instrumentid={} ' \
-                           'AND strategycode={}'.format(ID, code)
+                           'AND strategycode={}'.format(ID, strategyCode)
             self.engine.execute(delete_query)
 
             # get market data for each day in database
@@ -184,11 +192,11 @@ class TradingSimulator:
                     cash = cash - (fabs(positionSize * close))
                     # total portfolio value
                     portfolioValue = cash + (fabs(positionSize * close))
-                    insert_query = insert_query.format(date, ID, code, positionSize, cash, portfolioValue)
+                    insert_query = insert_query.format(date, ID, strategyCode, positionSize, cash, portfolioValue)
                     self.engine.execute(insert_query)
 
                 # update portfolio value each day with most recent share price
                 else:
                     portfolioValue = cash + fabs(positionSize * close)
-                    insert_query = insert_query.format(date, ID, code, positionSize, cash, portfolioValue)
+                    insert_query = insert_query.format(date, ID, strategyCode, positionSize, cash, portfolioValue)
                     self.engine.execute(insert_query)
