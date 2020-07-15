@@ -7,20 +7,17 @@ from FinsterTab.W2020.EngineeredFeatures import EngineeredFeatures
 from FinsterTab.W2020.TradingSimulator import TradingSimulator
 import FinsterTab.W2020.AccuracyTest
 
-""" 
-    Variables
-"""
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
 
-# Change to True to run any of the following
-
-# Phase 1: Set up db
-# Phase 2: Engineered data
-# Phase 3: Predictive data
-# Phase 4: Signals
-# Phase 5: Simulation
-
+"""
+    TOGGLE THE FOLLOWING BOOLEANS TO RUN THE DESIRED PORTIONS OF THE APPLICATION
+    Phase 1: Set up db
+    Phase 2: Engineered data
+    Phase 3: Predictive data
+    Phase 4: Signals
+    Phase 5: Simulation
+"""
 update_close_stats = False              # Pass 1.1
 reset_date_dim = False                  # Pass 1.2  (Takes around 5 minutes)
 update_macro_stats = False              # Pass 1.3
@@ -32,12 +29,11 @@ run_simulator = False                   # Pass 5    (Takes around 15 minutes)
 update_ars_forecast = True             # Pass 3.3
 
 """
-    Operations
+    OPERATIONS BELOW
 """
 
 # Create database connection
 db_engine = DBEngine().mysql_engine()
-
 
 if update_close_stats:
     # Get raw market data
@@ -51,14 +47,10 @@ if update_close_stats:
 if reset_date_dim:
     master_data.get_calendar()
 
-
-
 # Calculate forecast with functions that use macroeconomic indicators
 if update_macro_stats:
     FinsterTab.W2020.AccuracyTest.get_past_data(db_engine)
     DataFetch.macroFetch(db_engine)
-
-
 
 if update_msf_forecast:
     DataForecast.MSF1(db_engine)
@@ -91,7 +83,6 @@ if update_remaining_forecasts:
     # calculate and store XGBoost forecast
     forecast.calculate_xgboost_forecast()
 
-
 if update_signals:
     # Get Raw Data and Technical Indicators
     signals = BuySell(db_engine, instrument_master)
@@ -119,4 +110,4 @@ if run_simulator:
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
     # (first forecast date, last forecast date, history amount, average technique, insert into db, test, show output)
-    my.calculate_william_forecast4('2019-05-23', '2019-06-23', 30, False, True, False, False)
+    my.calculate_william_forecast4('2020-06-13', '2020-07-13', 30, False, True, True, False)
