@@ -77,15 +77,18 @@ class DataFetch:
                                             'instrumentid': sal.INT})
 
     # Populates the date dimension table. Only needs to be ran once.
-    def get_calendar(self):
+    def get_calendar(self, start_date, end_date):
         """
         Get date data to track weekends, holidays, quarter, etc
         Store in database table dbo_DateDim
         """
 
+        self.engine.execute('SET FOREIGN_KEY_CHECKS = 0')
+        self.engine.execute('TRUNCATE dbo_datedim')
+        self.engine.execute('SET FOREIGN_KEY_CHECKS = 1')
         # Set the date dimension range
-        lowerBound = pd.to_datetime('1947-01-01').date()
-        upperBound = pd.to_datetime('2047-01-01').date()
+        lowerBound = pd.to_datetime(start_date).date()
+        upperBound = pd.to_datetime(end_date).date()
 
         # list of US holidays
         cal = get_calendar('USFederalHolidayCalendar')  # Create calendar instance
