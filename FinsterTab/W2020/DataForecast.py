@@ -36,13 +36,20 @@ class DataForecast:
 
     def calculate_william_forecast4(self, forecast_first_date, forecast_last_date, history_amount, average, insert, is_test, show_output):
 
+        """
+            THIS ALGORITHM USES IT'S OWN PAST VALUES TO FORECAST FUTURE VALUES
+            IT USES HISTORICAL CLOSE PRICE LIMITS, AVERAGE CLOSE PRICE, AND MAXIMUM DEVIATION AS FORECAST INDICATORS
+        """
+
+        """
+            CHECK DATABASE IF ALGORITHM EXISTS (AND ADD IF DOES NOT)
+        """
         # Code name for this algorithm in AlgorithmMaster
         algoCode = "'ARS'"
 
         # Retrieve all the instruments from InstrumentMaster
         query = 'SELECT * FROM {}'.format(self.table_name)
         df = pd.read_sql_query(query, self.engine)
-
 
         # Add algorithm to AlgorithmMaster if DNE
         code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
@@ -52,17 +59,24 @@ class DataForecast:
             insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
             self.engine.execute(insert_code_query)
 
-        # Remove all previous ARS forecasts from database
+        """
+            REMOVE PREVIOUS 'ARS' PREDICTIONS
+        """
         delete_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode="ARS"'
         self.engine.execute(delete_query)
 
+        """
+            COLLECT DESIRED RANGE OF FORECAST MARKET DATES
+        """
         # Collect range of forecast dates the market is open
         # between forecast_first_date and forecast_last_date and save into forecast_dates
         query = 'SELECT date FROM dbo_datedim WHERE date>="{}" AND date <="{}" AND weekend = 0 AND isholiday = 0'\
             .format(forecast_first_date, forecast_last_date)
         forecast_dates = pd.read_sql_query(query, self.engine)
 
-        # Save the amount of days being forecasted
+        """
+            CALCULATE AND SAVE THE NUMBER OF DAYS TO FORECAST
+        """
         forecast_amount = len(forecast_dates)
 
         if show_output:
@@ -70,7 +84,9 @@ class DataForecast:
             print(forecast_dates)
             print(forecast_amount)
 
-        # Collect the most recent day that will be used for analysis
+        """
+            CALCULATE AND SAVE THE MOST RECENT DAY USED FOR ANALYSIS
+        """
         query = 'SELECT date FROM dbo_datedim WHERE date < "{}" AND weekend = 0 AND isholiday = 0' \
                 ' ORDER BY Date DESC LIMIT 1' \
             .format(forecast_dates['date'].iloc[0], history_amount)
@@ -80,24 +96,29 @@ class DataForecast:
             print("\n***** MOST RECENT HISTORICAL DATE MARKER *****\n")
             print(history_date_marker)
 
-
-        # Loop through each instrument one at a time
-        # This outer loop section is visited once for each instrument, before their first forecast
+        """
+            LOOP THROUGH EACH INSTRUMENT, ONE AT A TIME
+        """
         for ID in df['instrumentid']:
 
-            # SET PARAMETERS BEFORE EACH INSTRUMENT'S FIRST FORECAST
-
-            # Get "history_amount" of real closing values and save into "close_and_date_data"
-            query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid={} AND date<="{}" ' \
-                'ORDER BY Date DESC LIMIT {}'.format(ID, history_date_marker['date'].iloc[0], history_amount)
+            """
+                COLLECT AND SAVE HISTORICAL DATA FOR INSTRUMENT
+            """
+            query = 'SELECT date, close ' \
+                    'FROM dbo_instrumentstatistics ' \
+                    'WHERE instrumentid={} AND date<="{}" ' \
+                    'ORDER BY Date DESC ' \
+                    'LIMIT {}'\
+                .format(ID, history_date_marker['date'].iloc[0], history_amount)
             close_and_date_data = pd.read_sql_query(query, self.engine)
 
             if show_output:
                 print("\n***** STARTING HISTORICAL DATA *****\n")
                 print(close_and_date_data)
 
-
-            # Save "global" values for each instrument to use
+            """
+                SAVE GLOBAL, CONSTANT INDICATORS TO BE USED FOR FORECASTING
+            """
             real_max = close_and_date_data['close'].max()
             real_min = close_and_date_data['close'].min()
             real_avg = close_and_date_data['close'].mean()
@@ -112,27 +133,38 @@ class DataForecast:
                 print("Real Range: ${:.2f}".format(real_range))
                 print("Real Max Deviation: {:.2f}%".format(real_max_deviation*100))
 
-            # Set influence values to default value at the beginning od each instruments forecast cycle
+            """
+                PRESET INFLUENCE BOOLEANS TO DEFAULT
+            """
             influence_up = False
             influence_down = False
 
-            # Loop through the future, 1 day at a time (day stores the date)
+            """
+                LOOP THROUGH FORECAST RANGE OF DATES, ONE DAY AT A TIME
+            """
             for day in forecast_dates['date']:
 
-
-                # PERFORM CALCULATIONS
+                """
+                    PERFORM LOCAL CALCULATIONS
+                """
                 # Newest forecasts are inserted into the front, so most recent close is at index 0
                 last_close = close_and_date_data['close'].iloc[0]
                 max_close = close_and_date_data['close'].iloc[:history_amount].max()
                 min_close = close_and_date_data['close'].iloc[:history_amount].min()
                 avg_close = close_and_date_data['close'].iloc[:history_amount].mean()
+
+                """
+                    CALCULATE NEUTRAL FORECAST RANGE
+                """
                 # The amount of dollars the forecast is allowed to range between
                 forecast_price_range = last_close * real_max_deviation
                 # The neutral limits of where the forecast can land between
                 neutral_lower_range = last_close - (forecast_price_range / 2)
                 neutral_upper_range = last_close + (forecast_price_range / 2)
 
-                # Shift Forecast Range
+                """
+                    SHIFT FORECAST RANGE
+                """
                 # If the last close price is trending lower than the average
                 if last_close < avg_close:
                     ascend = False
@@ -152,6 +184,9 @@ class DataForecast:
                     shifted_lower_range = neutral_lower_range + shift_amount
                     shifted_upper_range = neutral_upper_range + shift_amount
 
+                """
+                    PRINT DATA USED TO GENERATE THE NEXT FORECAST CLOSE PRICE
+                """
                 if show_output:
                     # print results
                     print("\n***** MOST RECENT {}-DAY CLOSE STATISTICS BEING USED FORE {} *****\n"
@@ -180,11 +215,12 @@ class DataForecast:
                               .format(down_percent * 100, forecast_price_range, shift_amount))
                     print("Shifted Forecast Range: ${:.2f} - ${:.2f}".format(shifted_lower_range, shifted_upper_range))
 
+                """
+                    GENERATE FORECAST
+                """
                 if show_output:
                     # Generate Forecasts
                     print("\n\n***** Generate Forecast Close Price *****")
-
-
                 rand.seed(datetime.now())
                 # The last forecast was below the 30 day minimum. Force an increase
                 if influence_up:
@@ -217,6 +253,9 @@ class DataForecast:
                     else:
                         print("Forecasted Close Price (Random) for {}: ${:.2f}".format(day, forecast_choice_random))
 
+                """
+                    PREPARE INFLUENCE BOOLEANS FOR NEXT FORECAST
+                """
                 if average:
                     # Adjust next run based on forecast
                     if forecast_choice_average < real_min:
@@ -250,6 +289,9 @@ class DataForecast:
                 if show_output:
                     print("________________________")
 
+                """
+                    INSERT FORECAST INTO DATABASE
+                """
                 # Prep the newest forecast to be added to close_and_date_data
                 if average:
                     new_forecast = pd.DataFrame({'date': day, 'close': forecast_choice_average.__round__(2)}, index=[0])
@@ -273,32 +315,39 @@ class DataForecast:
                     insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                     self.engine.execute(insert_query)
 
-            if is_test and ID == 1:
+            """
+                TEST THE FORECAST ACCURACY OF THE INSTRUMENT
+            """
+            if is_test:
                 print("\n\n\n***** FORECASTED CLOSE VALUES for {} *****".format(ID))
-                forecasted_date_and_close = close_and_date_data.iloc[0:forecast_amount]
-                print(forecasted_date_and_close)
-
-                forecasted_close = np.array(forecasted_date_and_close['close'])
+                forecast_date_and_close = close_and_date_data.iloc[0:forecast_amount]
+                print(forecast_date_and_close)
 
                 print("\n***** ACTUAL CLOSE VALUES for {}*****".format(ID))
                 query = 'SELECT date, close FROM dbo_instrumentstatistics ' \
-                        'WHERE instrumentid={} AND date>="{}" AND date<="{}" ORDER BY date DESC' \
+                        'WHERE instrumentid={} AND date>="{}" AND date<="{}" ' \
+                        'ORDER BY date DESC' \
                     .format(ID, forecast_first_date, forecast_last_date)
                 actual_date_and_close = pd.read_sql_query(query, self.engine)
                 print(actual_date_and_close)
 
-                actual_close = np.array(actual_date_and_close['close'])
-
                 print("\n***** ERROR CALCULATIONS FOR {} *****".format(ID))
                 # Mean Absolute Error
-                mae = mean_absolute_error(actual_close, forecasted_close)
+                mae = mean_absolute_error(actual_date_and_close['close'], forecast_date_and_close['close'])
 
                 # Mean Absolute Percentage Error
+
                 errors = []
-                for i in range(len(actual_close)):
-                    abs_diff = np.abs(actual_close[i] - forecasted_close[i])
-                    percent_error = abs_diff/actual_close[i]
+                for i in range(len(actual_date_and_close)):
+                    abs_diff = np.abs(
+                        actual_date_and_close['close'].iloc[i] - forecast_date_and_close['close'].iloc[i])
+                    percent_error = abs_diff/actual_date_and_close['close'].iloc[i]
                     errors.append(percent_error)
+                    update_query = 'UPDATE dbo_algorithmforecast ' \
+                                   'SET prederror={} ' \
+                                   'WHERE forecastdate="{}" AND instrumentid={}'\
+                        .format(percent_error*100, forecast_date_and_close['date'].iloc[i], ID)
+                    self.engine.execute(update_query)
                 mape = np.average(errors)*100
 
                 print("Mean Absolute Error: ${:.2f}".format(mae))
