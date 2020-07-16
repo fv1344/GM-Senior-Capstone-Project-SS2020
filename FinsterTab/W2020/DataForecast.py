@@ -1174,7 +1174,7 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
-    def calculate_random_forest_forecast(self):
+    def calculate_random_forest_forecast(self, start_date):
         """
         Calculate historic next-day returns based on Random Forest forecast model
         and 10 days of future price forecast
@@ -1214,8 +1214,12 @@ class DataForecast:
                                'forecastdate={}'.format(algoCode, ID, latest_date_str)
                 self.engine.execute(delete_query)
 
+
             # get raw price data from database
-            data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
+            data_query = 'SELECT date, close ' \
+                         'FROM dbo_instrumentstatistics ' \
+                         'WHERE instrumentid={} AND date >= "{}"' \
+                .format(ID, start_date)
             data = pd.read_sql_query(data_query, self.engine)
 
             # training data size
@@ -1583,7 +1587,7 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
-    def calculate_regression(self, start_date, forecast_amount):
+    def calculate_regression(self, start_date, num_days_for_model, forecast_amount):
         """
             Calculate polynomial regression of the next 10 days
             Algorithm's accuracy is... questionable
@@ -1604,8 +1608,9 @@ class DataForecast:
         # loop through each ticker symbol
         for ID in df['instrumentid']:
 
+
             # remove all future prediction dates
-            remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND prederror=0 AND ' \
+            remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND prederror=-1 AND ' \
                                   'instrumentid={}'.format(algoCode, ID)
             self.engine.execute(remove_future_query)
 
@@ -1630,12 +1635,14 @@ class DataForecast:
             data = pd.read_sql_query(data_query, self.engine)
 
             # regression model from previous days
-            input_length = 20
+            input_length = num_days_for_model
 
             # predict ahead
             forecast_length = forecast_amount
+
             for n in range(input_length, len(data)):
 
+                # Data to be used in model calculation
                 recent_data = data[n - input_length:n]
 
                 # get most recent trading day
@@ -1687,7 +1694,7 @@ class DataForecast:
                     forecastClose = (round(forecastClose[0], 3))
                     # populate entire table if empty
                     # or add new dates based on information in Statistics table
-                    insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, 0)
+                    insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, -1)
 
                     self.engine.execute(insert_query)
     def MSF1(self):
