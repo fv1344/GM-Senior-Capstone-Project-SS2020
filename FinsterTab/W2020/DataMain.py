@@ -19,7 +19,7 @@ instrument_master = 'dbo_instrumentmaster'
     Phase 5: Simulation
 """
 update_close_stats = False              # Pass 1.1
-reset_date_dim = False                  # Pass 1.2  (Takes around 5 minutes)
+reset_date_dim = False                  # Pass 1.2  (Takes around 1 minute)
 update_macro_stats = False              # Pass 1.3
 update_msf_forecast = False             # Pass 3.2  (Takes around 3 minutes)
 update_engineered_features = False      # Pass 2
@@ -68,20 +68,43 @@ if update_engineered_features:
 if update_remaining_forecasts:
     # Get raw data from database to calculate forecasts
     forecast = DataForecast(db_engine, instrument_master)
+
     # Polynomial regression function
     # Takes a while to run, comment out if need be
-    forecast.calculate_regression()
-    # calculate and store price predictions
+    # Params: start regression analysis date, number of days to use for analysis, forecast amount of days
+    # Flawed implementation because every record is deleted and recomputed every run
+    # 1 year = 1.5 min runtime
+    # Each run will take the same amount of time
+    forecast.calculate_regression("2019-07-15", 20, 5)
+
+    # calculate and store price predictions ("PricePred")
+    # 10 years = 2 min runtime
+    # Coded to not overwrite whole table every time (i.e. each run after first will be quick)
     forecast.calculate_forecast()
-    # calculate and store ARIMA forecast
-    forecast.calculate_arima_forecast()
-    # calculate and store Random Forest forecast
-    forecast.calculate_random_forest_forecast()
-    # flawed price prediction from previous semesters, without our improvements
+
+    # flawed price prediction from previous semesters, without our improvements ("PricePredOld")
+    # 10 years = 2 min runtime
+    # Coded to not overwrite whole table every time (i.e. each run after first will be quick)
     forecast.calculate_forecast_old()
+
+    # calculate and store ARIMA forecast
+    # 10 years = 3 min runtime
+    # Coded to not overwrite whole table every time (i.e. each run after first will be quick)
+    forecast.calculate_arima_forecast()
+
+    # calculate and store Random Forest forecast
+    # 1 year = 3.5min runtime
+    # Coded to not overwrite whole table every time (i.e. each run after first will be quick)
+    forecast.calculate_random_forest_forecast("2019-07-15")
+
     # calculate and store SVM forecast
+    # 10 years = 2.5 min runtime
+    # Coded to not overwrite whole table every time (i.e. each run after first will be quick)
     forecast.calculate_svm_forecast()
+
     # calculate and store XGBoost forecast
+    # 10 years = 3.5 min runtime
+    # Coded to not overwrite whole table every time (i.e. each run after first will be quick)
     forecast.calculate_xgboost_forecast()
 
 if update_signals:
