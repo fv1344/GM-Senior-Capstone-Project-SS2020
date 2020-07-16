@@ -1583,7 +1583,7 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
-    def calculate_regression(self, start_date):
+    def calculate_regression(self, start_date, forecast_amount):
         """
             Calculate polynomial regression of the next 10 days
             Algorithm's accuracy is... questionable
@@ -1633,7 +1633,7 @@ class DataForecast:
             input_length = 20
 
             # predict ahead
-            forecast_length = 5
+            forecast_length = forecast_amount
             for n in range(input_length, len(data)):
 
                 recent_data = data[n - input_length:n]
