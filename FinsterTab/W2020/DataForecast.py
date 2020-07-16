@@ -336,7 +336,6 @@ class DataForecast:
                 mae = mean_absolute_error(actual_date_and_close['close'], forecast_date_and_close['close'])
 
                 # Mean Absolute Percentage Error
-
                 errors = []
                 for i in range(len(actual_date_and_close)):
                     abs_diff = np.abs(
@@ -1584,7 +1583,7 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
-    def calculate_regression(self):
+    def calculate_regression(self, start_date):
         """
             Calculate polynomial regression of the next 10 days
             Algorithm's accuracy is... questionable
@@ -1624,7 +1623,10 @@ class DataForecast:
                 self.engine.execute(delete_query)
 
             # get raw price data from database
-            data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY Date ASC' % ID
+            data_query = 'SELECT date, close ' \
+                         'FROM dbo_instrumentstatistics ' \
+                         'WHERE instrumentid={} AND date >= "{}"'\
+                .format(ID, start_date)
             data = pd.read_sql_query(data_query, self.engine)
 
             # regression model from previous days
@@ -1632,7 +1634,6 @@ class DataForecast:
 
             # predict ahead
             forecast_length = 5
-
             for n in range(input_length, len(data)):
 
                 recent_data = data[n - input_length:n]
