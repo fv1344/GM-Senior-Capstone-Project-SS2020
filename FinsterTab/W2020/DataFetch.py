@@ -9,6 +9,7 @@ from fredapi import Fred
 import datapungibea as dpb #library for pulling GDP from the BEA database
 
 beadata= dpb.data("D332F410-2195-498F-9CA9-5100FEC8B4B6")
+beadata = beadata.NIPA('T10101')
 fred = Fred(api_key='26a5ada544f2b9589d92bac5f792dc5d')
 
 """
