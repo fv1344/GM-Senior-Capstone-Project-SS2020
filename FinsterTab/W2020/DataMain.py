@@ -133,5 +133,4 @@ if run_simulator:
 
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
-    # (first forecast date, last forecast date, history amount, average technique, insert into db, test, show output)
-    my.calculate_william_forecast4('2020-06-13', '2020-07-13', 30, True, True, True, False)
+    my.calculate_ars_forecast('2020-06-13', '2020-07-13', 30, True, True, True, False)
