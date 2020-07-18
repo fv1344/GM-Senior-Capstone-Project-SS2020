@@ -18,7 +18,6 @@ from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 import random as rand
 from sklearn.metrics import mean_absolute_error
-from sklearn.metrics import mean_squared_error
 
 
 # class declaration and definition
@@ -34,7 +33,8 @@ class DataForecast:
         self.engine = engine
         self.table_name = table_name
 
-    def calculate_ars_forecast(self, forecast_first_date, forecast_last_date, history_amount, average, insert, is_test, show_output):
+    def calculate_ars_forecast(
+            self, forecast_first_date, forecast_last_date, history_amount, average, insert, is_test, show_output):
         """
         THIS ALGORITHM USES IT'S OWN PAST VALUES TO FORECAST FUTURE VALUES
         IT USES HISTORICAL CLOSE PRICE LIMITS, AVERAGE CLOSE PRICE, AND MAXIMUM DEVIATION AS FORECAST INDICATORS
@@ -49,6 +49,7 @@ class DataForecast:
         :param show_output: Set to true to see what the code is doing at each step of the way
         :return: N/A
         """
+
         """
             CHECK DATABASE IF ALGORITHM EXISTS (AND ADD IF DOES NOT)
         """
