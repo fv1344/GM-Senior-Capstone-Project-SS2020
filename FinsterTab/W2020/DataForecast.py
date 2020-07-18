@@ -2054,7 +2054,7 @@ class DataForecast:
                 for i in forecast_dates:
                     temp = {i: []}
                     median_forecast.update(temp)
-
+                #will be changed to average here
                 # Initializes a variable to represent today's date, used to fetch forecast dates
                 currentDate = str(datetime.today())
                 # Applies quotes to current date so it can be read as a string
