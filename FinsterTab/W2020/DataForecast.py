@@ -25,6 +25,9 @@ from keras.layers import Dense, LSTM
 from tensorflow.keras import Sequential
 from sklearn.preprocessing import *
 import math
+from pandas.tseries.holiday import get_calendar, HolidayCalendarFactory, GoodFriday
+import holidays
+from pandas.tseries.offsets import *
 
 
 # class declaration and definition
@@ -39,6 +42,19 @@ class DataForecast:
         """
         self.engine = engine
         self.table_name = table_name
+
+# Function to use in FJF for finding the date that starts the testing set because LSTM is complicated with its outputs
+    def date_by_subtracting_business_days(from_date, add_days):
+        us_holidays = holidays.US()
+        business_days_to_add = add_days
+        current_date = from_date
+        while business_days_to_add > 0:
+            current_date =current_date - timedelta(days=1)
+            weekday = current_date.weekday()
+            if weekday >= 5 or current_date in us_holidays:  # sunday = 6
+                continue
+            business_days_to_add -= 1
+        return current_date
 
     def FJF(self):
 
@@ -148,6 +164,8 @@ class DataForecast:
             print("")
             print("The Root Mean Squared Error for the model's prediction to actual close values is: " + str(RMSE))
             print("")
+            print("Future test:")
+            print(futureTest)
 
             # Create Mean absolute percent error to store in pred error
             i=0
@@ -169,8 +187,10 @@ class DataForecast:
 
             #loop to add test predictions to table
             i=0
-            numOfDays=len(closeDataSet)-trainingLength # to find the number of days before the current date to start predictions
-            fcDate=datetime.now() - timedelta(days=numOfDays) #date will start at the beginning of the test set
+            numOfDays=len(closeDataSet)-trainingLength # to find the number of weekdays before the current date to start predictions
+
+            fcDate=DataForecast.date_by_subtracting_business_days(dt.date.today(), numOfDays) #date will start at the beginning of the test set
+
 
             while(i<=len(forecastPrices)-1): #while loop to push the predictions to database
                 storeThis=float(forecastPrices[i]) #iterate through each index which will contain the forecasted value
@@ -178,8 +198,12 @@ class DataForecast:
                 insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}",{},{},{},{})'
 
                 predError = float(testPredError[i])
+                us_holidays = holidays.US()
+                while (fcDate.weekday() >= 5 or fcDate in us_holidays):
+                    fcDate = fcDate + timedelta(days=1)
 
                 forecastDate = fcDate.strftime("%Y-%m-%d")
+                print(forecastDate)
                 insert_query = insert_query.format(forecastDate, ID, storeThis, algoCode, predError)
                 self.engine.execute(insert_query)
 
