@@ -34,13 +34,21 @@ class DataForecast:
         self.engine = engine
         self.table_name = table_name
 
-    def calculate_william_forecast4(self, forecast_first_date, forecast_last_date, history_amount, average, insert, is_test, show_output):
-
+    def calculate_ars_forecast(self, forecast_first_date, forecast_last_date, history_amount, average, insert, is_test, show_output):
         """
-            THIS ALGORITHM USES IT'S OWN PAST VALUES TO FORECAST FUTURE VALUES
-            IT USES HISTORICAL CLOSE PRICE LIMITS, AVERAGE CLOSE PRICE, AND MAXIMUM DEVIATION AS FORECAST INDICATORS
-        """
+        THIS ALGORITHM USES IT'S OWN PAST VALUES TO FORECAST FUTURE VALUES
+        IT USES HISTORICAL CLOSE PRICE LIMITS, AVERAGE CLOSE PRICE, AND MAXIMUM DEVIATION AS FORECAST INDICATORS
 
+        :param forecast_first_date: The first date that will be forecasted
+        :param forecast_last_date:  The last date that will be forecasted
+        :param history_amount: How many days before forecast_first_date to use for forecast insight data
+        :param average: Set to true to use the version of this algorithm that generates an average over a range
+                        Set to false to use the version of this algorithm that generates a random number over a range
+        :param insert: Set to true to insert the forecasts into the database
+        :param is_test: Set to true to run a percentage error test (only can be used in a range with close prices)
+        :param show_output: Set to true to see what the code is doing at each step of the way
+        :return: N/A
+        """
         """
             CHECK DATABASE IF ALGORITHM EXISTS (AND ADD IF DOES NOT)
         """
