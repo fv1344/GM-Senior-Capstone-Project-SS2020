@@ -22,15 +22,15 @@ instrument_master = 'dbo_instrumentmaster'
 # Phase 5: Simulation
 
 update_close_stats = False              # Pass 1.1
-reset_date_dim = False                  # Pass 1.2  (Takes around 5 minutes)
+reset_date_dim = False                 # Pass 1.2  (Takes around 5 minutes)
 update_macro_stats = False              # Pass 1.3
 update_msf_forecast = False             # Pass 3.2  (Takes around 3 minutes)
 update_engineered_features = False      # Pass 2
-update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
-update_signals = False                  # Pass 4    (Takes around 5-10 minutes
+update_remaining_forecasts = True     # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
+update_signals = True                  # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
 update_ars_forecast = False             # Pass 3.3
-update_fjf_forecast = True
+update_fjf_forecast = False
 """
     Operations
 """
@@ -65,6 +65,7 @@ if update_msf_forecast:
     DataForecast.MSF2(db_engine)
     DataForecast.MSF3(db_engine)
     DataForecast.MSF2_Past_Date(db_engine)
+    DataForecast.MSF_new(db_engine)
 
 if update_engineered_features:
     # Get raw data from database to calculate forecasts
@@ -77,13 +78,13 @@ if update_remaining_forecasts:
     forecast = DataForecast(db_engine, instrument_master)
     # Polynomial regression function
     # Takes a while to run, comment out if need be
-    forecast.calculate_regression()
+    forecast.calculate_regression("2019-07-15",20,5)
     # calculate and store price predictions
     forecast.calculate_forecast()
     # calculate and store ARIMA forecast
     forecast.calculate_arima_forecast()
     # calculate and store Random Forest forecast
-    forecast.calculate_random_forest_forecast()
+    forecast.calculate_random_forest_forecast("2019-07-15")
     # flawed price prediction from previous semesters, without our improvements
     forecast.calculate_forecast_old()
     # calculate and store SVM forecast

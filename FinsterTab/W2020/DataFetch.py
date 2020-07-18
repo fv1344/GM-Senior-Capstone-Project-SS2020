@@ -6,9 +6,9 @@ import sqlalchemy as sal                          # SQL toolkit, Object-Relation
 from pandas.tseries.holiday import get_calendar, HolidayCalendarFactory, GoodFriday  # calendar module to use a pre-configured calendar
 import quandl
 from fredapi import Fred
-import datapungibea as dpb #library for pulling GDP from the BEA database
+#import datapungibea as dpb #library for pulling GDP from the BEA database
 
-beadata= dpb.data("D332F410-2195-498F-9CA9-5100FEC8B4B6")
+#beadata= dpb.data("D332F410-2195-498F-9CA9-5100FEC8B4B6")
 fred = Fred(api_key='26a5ada544f2b9589d92bac5f792dc5d')
 
 """
@@ -85,9 +85,13 @@ class DataFetch:
         Store in database table dbo_DateDim
         """
 
+        self.engine.execute('SET FOREIGN_KEY_CHECKS = 0')
+        self.engine.execute('TRUNCATE dbo_datedim')
+        self.engine.execute('SET FOREIGN_KEY_CHECKS = 1')
+
         # Set the date dimension range
-        lowerBound = pd.to_datetime('1947-01-01').date()
-        upperBound = pd.to_datetime('2047-01-01').date()
+        lowerBound = pd.to_datetime('2001-01-01').date()
+        upperBound = pd.to_datetime('2025-12-31').date()
 
         # list of US holidays
         cal = get_calendar('USFederalHolidayCalendar')  # Create calendar instance
