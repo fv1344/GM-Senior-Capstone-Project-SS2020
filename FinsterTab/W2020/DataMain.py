@@ -7,7 +7,7 @@ from FinsterTab.W2020.EngineeredFeatures import EngineeredFeatures
 from FinsterTab.W2020.TradingSimulator import TradingSimulator
 import FinsterTab.W2020.AccuracyTest
 
-""" 
+"""
     Variables
 """
 # instrument symbol table
@@ -27,10 +27,12 @@ update_macro_stats = False              # Pass 1.3
 update_msf_forecast = False             # Pass 3.2  (Takes around 3 minutes)
 update_engineered_features = False      # Pass 2
 update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
-update_signals = False                  # Pass 4    (Takes around 5-10 minutes
+update_signals = False             # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
-update_ars_forecast = False             # Pass 3.3
-update_fjf_forecast = True
+update_ars_forecast = False            # Pass 3.3
+update_regression_forecast = True
+
+
 """
     Operations
 """
@@ -52,6 +54,11 @@ if reset_date_dim:
     master_data.get_calendar()
 
 
+if update_regression_forecast:
+    forecast = DataForecast(db_engine, instrument_master)
+    # Polynomial Regression Function
+    # Takes a while to run, comment out if need be
+    forecast.calculate_lr_forecast()
 
 # Calculate forecast with functions that use macroeconomic indicators
 if update_macro_stats:
@@ -78,8 +85,9 @@ if update_remaining_forecasts:
     # Polynomial regression function
     # Takes a while to run, comment out if need be
     forecast.calculate_regression()
+
     # calculate and store price predictions
-    forecast.calculate_forecast()
+#    forecast.calculate_forecast()
     # calculate and store ARIMA forecast
     forecast.calculate_arima_forecast()
     # calculate and store Random Forest forecast
@@ -99,12 +107,17 @@ if update_signals:
     signals.cma_signal()
     # generate FRL trade signals
     signals.frl_signal()
-    # generate EMA trade signals
-    signals.ema_signal()
     # generate MACD signals
     signals.macd_signal()
     # forecast-based signals
     signals.algo_signal()
+    # cci cignal
+    signals.cci_signal()
+    # kd stochatistics signal
+    signals.kd_stochastics_signal()
+    # generate EMA trade signals
+    signals.ema_signal()
+
 
 if run_simulator:
     # Run Trade Simulations Based on Trade Signals
@@ -118,9 +131,5 @@ if run_simulator:
 
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
-    my.calculate_william_forecast3()
-
-if update_fjf_forecast:
-    my = DataForecast(db_engine, instrument_master)
-    #my.FJF1()
-    my.FJF2()
+    # (first forecast date, last forecast date, history amount, average technique, insert into db, test, show output)
+    my.calculate_william_forecast4('2019-05-23', '2019-06-23', 30, False, True, False, False)
