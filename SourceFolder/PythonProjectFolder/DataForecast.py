@@ -18,6 +18,11 @@ from sklearn.preprocessing import PolynomialFeatures
 import matplotlib.pyplot as plt
 import random as rand
 from sklearn.metrics import mean_absolute_error
+from keras.layers import Dense, LSTM
+from tensorflow.keras import Sequential
+from sklearn.preprocessing import *
+import math
+import holidays
 
 
 # class declaration and definition
@@ -32,6 +37,214 @@ class DataForecast:
         """
         self.engine = engine
         self.table_name = table_name
+        
+    def subtractWeekdays(from_date, add_days):
+            us_holidays = holidays.US()
+            business_days_to_add = add_days
+            current_date = from_date
+            while business_days_to_add > 0:
+                current_date = current_date - timedelta(days=1)
+                weekday = current_date.weekday()
+                if weekday >= 5 or current_date in us_holidays:  # sunday = 6
+                    continue
+                business_days_to_add -= 1
+            return current_date
+
+    def FJF(self):
+            '''Frino Jais Function(FJF) for stock market forecasting'''
+            '''Uses Deep Learning and LSTM for forecast tomorrow's using the previous 90 days of close prices for each stock'''
+            query = 'SELECT * FROM {}'.format(self.table_name)  # select all rows from instrument master
+            df = pd.read_sql_query(query, self.engine)  # store that into dataframe
+
+            # print(df)
+
+            algoCode = "'FJF'"  # My algocode to be stored in table for reference
+
+            # add code to database if it doesn't exist
+            code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode  # check if we have FJF
+            count = pd.read_sql_query(code_query, self.engine)  # execute the query
+            if count.iat[0, 0] == 0:  # if we find no FJF, add it to table
+                algoName = "'FrinoJaisFunction'"
+                insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
+                self.engine.execute(insert_code_query)
+
+            # loop through each ticker symbol
+            for ID in df['instrumentid']:  # apply FJF for each stock
+                # remove all future prediction dates - these need to be recalculated daily
+                remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND ' \
+                                      'instrumentID={}'.format(algoCode, ID)
+                self.engine.execute(remove_future_query)
+
+                # get raw price data from database
+                data_query = 'SELECT date, close FROM dbo_instrumentstatistics WHERE instrumentid=%s ORDER BY date ASC' % ID
+                data = pd.read_sql_query(data_query, self.engine)  # close values in dataframe
+
+                # get stock name
+                stockNameQuery = 'SELECT instrumentname FROM dbo_instrumentmaster WHERE instrumentid=%s' % ID
+                stockName = pd.read_sql_query(stockNameQuery, self.engine)  # pull stock name
+                stockName = stockName['instrumentname'].values[0]
+
+                # i want to get just the close values from the instrument stats table
+                closeData = data.filter(['close'])
+                # these close values will be converted into a numpy 2D array for easier processing
+                closeDataSet = closeData.values
+                # would like to train 80% of data, standard training rate and round up if it is a decimal
+                trainingLength = math.ceil(len(closeDataSet) * 0.8)  # for the 80:20 training:testing model
+
+                # Scale the data, this is a method that must be used when using neural networks
+                # input data is being preprocessed
+                dataScaler = MinMaxScaler(feature_range=(
+                0, 1))  # data will be scaled in values from 0 to 1 which is easier to be read by keras
+                scaledData = dataScaler.fit_transform(
+                    closeDataSet)  # transform close data set to compute the min and max values to be used to scaling
+
+                # Create training data set
+                trainingDataSet = scaledData[0:trainingLength,
+                                  :]  # create scaled training data set which will contain the values from index 0 to training length
+
+                pastTrain = []  # independent training variables, these will be the stored close values used to train the model
+                futureTrain = []  # dependent training varaibles, this array will store the prediction
+
+                # Create a for loop to pull from the last 90 days
+                # every time the for loop is ran, a prediction value will be stored into future train until the end of the training data set length is reached
+                for i in range(90, len(trainingDataSet)):  # only looking at training data set now
+                    pastTrain.append(trainingDataSet[i - 90:i, 0])  # store the past scaled values from index 0 to 89
+                    futureTrain.append(trainingDataSet[
+                                           i, 0])  # will contain 91st values indexed at 90 this will be forecast values to be trained
+
+                pastTrain = np.array(pastTrain)  # array that hold the past 90 close price sets
+                futureTrain = np.array(futureTrain)  # will contain the "perfect forecast prices"
+
+                # Data must be reshaped because keras requires a 3-d model
+                pastTrain = np.reshape(pastTrain, (
+                pastTrain.shape[0], 90, 1))  # (Number of samples, number of timesteps, number of features)
+
+                # LSTM MODEL
+                # Have to build layers for the LSTM model
+                lstmModel = Sequential()  # the sequential class in keras takes input and produces outputs based on layers
+                lstmModel.add(LSTM(50, return_sequences=True,
+                                   input_shape=(90, 1)))  # giving the first layer our past 90 day input
+                lstmModel.add(LSTM(50, return_sequences=False))  # rule of thumb to follow: sample size/2
+                lstmModel.add(Dense(25))  # outputs a shape of 25 # giving outpupt predictions
+                lstmModel.add(Dense(1))  # output a shape of 1
+
+                # Declare optimizer and loss function
+                # optimizer adaptive moment estimation
+                lstmModel.compile(optimizer='adam',
+                                  loss='mean_squared_error')  # optimizer used to improve loss function and loss function is used to test accuracy
+
+                # Training
+                # batch size is the group of data
+                # epoch is how many times the from start to end
+                # stochastic gradient descent
+                print("")
+                print("Learning data for " + stockName + ". Please wait...")
+                lstmModel.fit(pastTrain, futureTrain, batch_size=1, epochs=1)
+
+                # training is done now
+
+                # Create testing data  (want to try to predict the last 20% of data)
+                testData = scaledData[trainingLength - 90:,
+                           :]  # this array will contain values from the current row number 1118 to row 1208 (90 days prediction)
+
+                pastTest = []  # past 90 values
+                futureTest = closeDataSet[trainingLength:, :]  # last 20% of values from our set
+
+                for i in range(90, len(testData)):
+                    pastTest.append(testData[i - 90:i, 0])  # store the last 90 values to pastTest
+
+                pastTest = np.array(pastTest)  # convert to numpy array
+
+                pastTest = np.reshape(pastTest, (
+                pastTest.shape[0], 90, 1))  # reshape xTest to 3-d format so it is easier to be read by keras
+
+                forecastPrices = lstmModel.predict(pastTest)  # forecast prices based on past test values (90 day sets)
+                forecastPrices = dataScaler.inverse_transform(forecastPrices)
+                print("Test Forecast: ")
+                print(forecastPrices)
+                # Create Mean absolute percent error to store in pred error
+                i = 0
+                testPredError = []
+                testPredErrorSum = 0
+                while (i < len(forecastPrices)):
+                    actual = futureTest[i]
+                    forecast = forecastPrices[i]
+                    percentError = ((abs(actual - forecast)) / actual) * 100
+                    testPredError.append(percentError)
+                    testPredErrorSum = testPredErrorSum + percentError
+
+                    i = i + 1
+
+                MAPE = testPredErrorSum / (len(forecastPrices))
+
+                print("The Mean Absolute Percent Error for the model's predictions to close values is: " + str(MAPE))
+                print("")
+
+                # loop to add test predictions to table
+                i = 0
+                numOfDays = len(
+                    closeDataSet) - trainingLength  # to find the number of weekdays before the current date to start predictions
+
+                fcDate = DataForecast.subtractWeekdays(dt.date.today(),
+                                                       numOfDays)  # date will start at the beginning of the test set
+
+                # while loop to push the test values to table
+                while (i <= len(forecastPrices) - 1):
+                    storeThis = float(
+                        forecastPrices[i])  # iterate through each index which will contain the forecasted value
+
+                    insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}",{},{},{},{})'
+
+                    predError = float(testPredError[i])
+                    us_holidays = holidays.US()
+                    while (fcDate.weekday() >= 5 or fcDate in us_holidays):
+                        fcDate = fcDate + timedelta(days=1)
+
+                    forecastDate = fcDate.strftime("%Y-%m-%d")
+                    print(forecastDate)
+                    insert_query = insert_query.format(forecastDate, ID, storeThis, algoCode, predError)
+                    self.engine.execute(insert_query)
+
+                    fcDate = fcDate + timedelta(days=1)  # increase the day by one day for each loop
+                    i = i + 1
+
+                # ********************** Prediction Phase ***********************
+
+                last90days = closeData[-90:].values  # close data from the last 90 days
+                futureForecast = []
+                fcDate = datetime.now()
+                i = 0
+
+                # loop to output next 30 days (WORKS)
+                while (i < 30):
+                    scaledLast90Days = dataScaler.transform(last90days)  # transform he values to be between 0 and 1
+                    independentTest = []  # create an empty list to store last 90 days
+                    independentTest.append(scaledLast90Days)  # store the last 90 days of scaled values
+                    independentTest = np.array(independentTest)  # change the list in to an array
+                    independentTest = np.reshape(independentTest,
+                                                 (independentTest.shape[0], independentTest.shape[1], 1))  # 2d to 3d
+                    nextDayForecast = lstmModel.predict(independentTest)  # get prediction value for next day
+                    nextDayForecast = dataScaler.inverse_transform(
+                        nextDayForecast)  # transform scaled value to normal format
+                    futureForecast.extend(nextDayForecast.tolist())  # add new value to future forecast list
+                    last90days = np.append(last90days, nextDayForecast[0])  # add new values to 90 day set
+                    last90days = last90days[
+                                 1:]  # move one index up to the previous 90 values that now include the forecast price to predict the next price
+                    last90days = last90days.reshape(-1, 1)  # reshape to 2d
+
+                    insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}",{},{},{},{})'
+                    forecastClose = nextDayForecast
+                    predError = 0
+                    fcDate = fcDate + timedelta(days=1)
+                    forecastDate = fcDate.strftime("%Y-%m-%d")
+                    forecastClose = forecastClose.flatten()  # have to pull the value out of the 2d array
+                    insert_query = insert_query.format(forecastDate, ID, forecastClose[0], algoCode, predError)
+                    self.engine.execute(insert_query)
+
+                    i = i + 1
+
+                print("Future forecast is: ")
+                print(futureForecast)
 
     def calculate_ars_forecast(
             self, forecast_first_date, forecast_last_date, history_amount, average, insert, is_test, show_output):
