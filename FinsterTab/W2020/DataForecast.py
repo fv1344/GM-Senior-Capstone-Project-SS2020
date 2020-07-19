@@ -44,7 +44,7 @@ class DataForecast:
         self.table_name = table_name
 
 # Function to use in FJF for finding the date that starts the testing set because LSTM is complicated with its outputs
-    def date_by_subtracting_business_days(from_date, add_days):
+    def subtractWeekdays(from_date, add_days):
         us_holidays = holidays.US()
         business_days_to_add = add_days
         current_date = from_date
@@ -57,24 +57,25 @@ class DataForecast:
         return current_date
 
     def FJF(self):
-
         '''Frino Jais Function(FJF) for stock market forecasting'''
-        '''Uses Deep Learning and Neural Networks for forecast using the previous 90 days of close prices for each stock'''
+        '''Uses Deep Learning and LSTM for forecast tomorrow's using the previous 90 days of close prices for each stock'''
         query = 'SELECT * FROM {}'.format(self.table_name) # select all rows from instrument master
         df = pd.read_sql_query(query, self.engine) # store that into dataframe
 
-        algoCode = "'FJF'"  # Master `algocode` for improved prediction from previous group, user created codes
+        #print(df)
+
+        algoCode = "'FJF'"  # My algocode to be stored in table for reference
 
         # add code to database if it doesn't exist
-        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
-        count = pd.read_sql_query(code_query, self.engine)
+        code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode # check if we have FJF
+        count = pd.read_sql_query(code_query, self.engine) #execute the query
         if count.iat[0, 0] == 0: # if we find no FJF, add it to table
             algoName = "'FrinoJaisFunction'"
             insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
             self.engine.execute(insert_code_query)
 
         # loop through each ticker symbol
-        for ID in df['instrumentid']:
+        for ID in df['instrumentid']: # apply FJF for each stock
             # remove all future prediction dates - these need to be recalculated daily
             remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND ' \
                                   'instrumentID={}'.format(algoCode, ID)
@@ -113,8 +114,8 @@ class DataForecast:
                 pastTrain.append(trainingDataSet[i-90:i,0]) # store the past scaled values from index 0 to 89
                 futureTrain.append(trainingDataSet[i, 0]) # will contain 91st values indexed at 90 this will be forecast values to be trained
 
-            pastTrain=np.array(pastTrain) # array that hold the past 90 close prices
-            futureTrain=np.array(futureTrain) # will contain the "perfect forecast price"
+            pastTrain=np.array(pastTrain) # array that hold the past 90 close price sets
+            futureTrain=np.array(futureTrain) # will contain the "perfect forecast prices"
         
             # Data must be reshaped because keras requires a 3-d model
             pastTrain=np.reshape(pastTrain, (pastTrain.shape[0], 90, 1)) # (Number of samples, number of timesteps, number of features)
@@ -145,7 +146,7 @@ class DataForecast:
             testData=scaledData[trainingLength-90:,:] # this array will contain values from the current row number 1118 to row 1208 (90 days prediction)
 
             pastTest=[] #past 90 values
-            futureTest=closeDataSet[trainingLength:,:] #prediction values stored here from 1208 onwards
+            futureTest=closeDataSet[trainingLength:,:] # last 20% of values from our set
 
             for i in range(90, len(testData)):
                 pastTest.append(testData[i-90:i, 0]) #store the last 90 values to pastTest
@@ -155,18 +156,10 @@ class DataForecast:
 
             pastTest=np.reshape(pastTest,(pastTest.shape[0],90,1)) #reshape xTest to 3-d format so it is easier to be read by keras
 
-            forecastPrices =lstmModel.predict(pastTest) # forecast prices based on past test values (last 90 days)
+            forecastPrices =lstmModel.predict(pastTest) # forecast prices based on past test values (90 day sets)
             forecastPrices = dataScaler.inverse_transform(forecastPrices)
-
-            # Root mean squared error test
-            RMSE = np.sqrt(np.mean((forecastPrices - futureTest) ** 2))
-
-            print("")
-            print("The Root Mean Squared Error for the model's prediction to actual close values is: " + str(RMSE))
-            print("")
-            print("Future test:")
-            print(futureTest)
-
+            print("Test Forecast: ")
+            print(forecastPrices)
             # Create Mean absolute percent error to store in pred error
             i=0
             testPredError=[]
@@ -189,10 +182,10 @@ class DataForecast:
             i=0
             numOfDays=len(closeDataSet)-trainingLength # to find the number of weekdays before the current date to start predictions
 
-            fcDate=DataForecast.date_by_subtracting_business_days(dt.date.today(), numOfDays) #date will start at the beginning of the test set
+            fcDate=DataForecast.subtractWeekdays(dt.date.today(), numOfDays) #date will start at the beginning of the test set
 
-
-            while(i<=len(forecastPrices)-1): #while loop to push the predictions to database
+            # while loop to push the test values to table
+            while(i<=len(forecastPrices)-1):
                 storeThis=float(forecastPrices[i]) #iterate through each index which will contain the forecasted value
 
                 insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}",{},{},{},{})'
@@ -234,7 +227,7 @@ class DataForecast:
 
                 insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ("{}",{},{},{},{})'
                 forecastClose=nextDayForecast
-                predError=0 # need to change to something meaningful
+                predError=0
                 fcDate=fcDate + timedelta(days=1)
                 forecastDate=fcDate.strftime("%Y-%m-%d")
                 forecastClose = forecastClose.flatten() # have to pull the value out of the 2d array
