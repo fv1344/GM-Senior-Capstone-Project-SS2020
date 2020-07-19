@@ -133,4 +133,4 @@ if run_simulator:
 
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
-    my.calculate_ars_forecast('2020-06-17', '2020-07-17', 20, False, True, True, False)
+    my.calculate_ars_forecast('2020-06-17', '2020-07-17', 15, False, True, True, False)
