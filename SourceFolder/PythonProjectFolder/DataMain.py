@@ -27,6 +27,7 @@ update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving
 update_signals = False                  # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
 update_ars_forecast = True             # Pass 3.3
+update_fjf_forecast = True
 
 """
     OPERATIONS BELOW
@@ -134,3 +135,7 @@ if run_simulator:
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
     my.calculate_ars_forecast('2020-06-17', '2020-07-17', 15, False, True, True, False)
+    
+if update_fjf_forecast:
+    my = DataForecast(db_engine, instrument_master)
+    my.FJF()
