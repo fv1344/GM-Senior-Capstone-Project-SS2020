@@ -1,11 +1,11 @@
 # Load other local Python modules to be used in this MAIN module
-from FinsterTab.W2020.DataFetch import DataFetch
-from FinsterTab.W2020.DataForecast import DataForecast
-from FinsterTab.W2020.dbEngine import DBEngine
-from FinsterTab.W2020.BuySell import BuySell
-from FinsterTab.W2020.EngineeredFeatures import EngineeredFeatures
-from FinsterTab.W2020.TradingSimulator import TradingSimulator
-import FinsterTab.W2020.AccuracyTest
+from SourceFolder.PythonProjectFolder.DataFetch import DataFetch
+from SourceFolder.PythonProjectFolder.DataForecast import DataForecast
+from SourceFolder.PythonProjectFolder.dbEngine import DBEngine
+from SourceFolder.PythonProjectFolder.BuySell import BuySell
+from SourceFolder.PythonProjectFolder.EngineeredFeatures import EngineeredFeatures
+from SourceFolder.PythonProjectFolder.TradingSimulator import TradingSimulator
+import SourceFolder.PythonProjectFolder.AccuracyTest
 
 # instrument symbol table
 instrument_master = 'dbo_instrumentmaster'
@@ -50,7 +50,7 @@ if reset_date_dim:
 
 # Calculate forecast with functions that use macroeconomic indicators
 if update_macro_stats:
-    FinsterTab.W2020.AccuracyTest.get_past_data(db_engine)
+    SourceFolder.PythonProjectFolder.AccuracyTest.get_past_data(db_engine)
     DataFetch.macroFetch(db_engine)
 
 if update_msf_forecast:
