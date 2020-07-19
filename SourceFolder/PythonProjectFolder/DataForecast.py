@@ -131,16 +131,17 @@ class DataForecast:
             real_max = close_and_date_data['close'].max()
             real_min = close_and_date_data['close'].min()
             real_avg = close_and_date_data['close'].mean()
-            real_range = real_max - real_min
-            real_max_deviation = real_range / real_avg
+            real_mad = close_and_date_data['close'].mad()
+            real_mad_percent = real_mad / real_avg
+
+
 
             if show_output:
                 print("\n***** REAL CONSTANT VALUES *****\n")
                 print("Real Max (Upper Limit): ${}".format(real_max))
                 print("Real Min (Lower Limit): ${}".format(real_min))
                 print("Real Avg: ${:.2f}".format(real_avg))
-                print("Real Range: ${:.2f}".format(real_range))
-                print("Real Max Deviation: {:.2f}%".format(real_max_deviation*100))
+                print("Real MAD Percent: {:.2f}%".format(real_mad_percent * 100))
 
             """
                 PRESET INFLUENCE BOOLEANS TO DEFAULT
@@ -166,7 +167,7 @@ class DataForecast:
                     CALCULATE NEUTRAL FORECAST RANGE
                 """
                 # The amount of dollars the forecast is allowed to range between
-                forecast_price_range = last_close * real_max_deviation
+                forecast_price_range = last_close * real_mad_percent
                 # The neutral limits of where the forecast can land between
                 neutral_lower_range = last_close - (forecast_price_range / 2)
                 neutral_upper_range = last_close + (forecast_price_range / 2)
@@ -208,9 +209,9 @@ class DataForecast:
                     print("Average: ${:.2f}".format(avg_close))
 
                     print("\n\n***** Forecast Range *****")
-                    print("Maximum Deviation Constant: {:.2f}%".format(real_max_deviation * 100))
+                    print("Average Deviation Constant: {:.2f}%".format(real_mad_percent * 100))
                     print("{:.2f}% of ${:.2f} = ${:.2f} of forecast range"
-                          .format(real_max_deviation * 100, last_close, forecast_price_range))
+                          .format(real_mad_percent * 100, last_close, forecast_price_range))
                     print("Neutral Forecast Range: ${:.2f} - ${:.2f}".format(neutral_lower_range, neutral_upper_range))
 
                     print("\n\n***** Shift Forecast Range *****")
