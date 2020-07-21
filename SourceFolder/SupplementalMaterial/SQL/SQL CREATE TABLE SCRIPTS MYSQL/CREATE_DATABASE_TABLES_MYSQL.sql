@@ -16,7 +16,7 @@ PRIMARY KEY (`date`)
 )
 ;
 
-DROP TABLE IF EXISTS dbo_instrumentmaster;  
+DROP TABLE IF EXISTS dbo_instrumentmaster;
 CREATE TABLE dbo_instrumentmaster(
 instrumentid            int,
 instrumentname          varchar(50),
@@ -43,7 +43,7 @@ VALUES (1, 'GM', 'Equity', 'YAHOO'),
 	   (10, 'HMC', 'Equity', 'YAHOO')
 ;
 
-DROP TABLE IF EXISTS dbo_macroeconmaster;  
+DROP TABLE IF EXISTS dbo_macroeconmaster;
 CREATE TABLE dbo_macroeconmaster(
 macroeconcode		varchar(50),
 macroeconname		varchar(50),
@@ -67,7 +67,7 @@ VALUES ('GDP', 'GDP', 'FRED/NGDPPOT', 'Quandl', 0, 'A'),
 ;
 
 DROP TABLE IF EXISTS dbo_instrumentstatistics;
-CREATE TABLE dbo_instrumentstatistics(        
+CREATE TABLE dbo_instrumentstatistics(
 `date`				date,
 high				float,
 low					float,
@@ -92,15 +92,15 @@ FOREIGN KEY (macroeconcode) REFERENCES dbo_macroeconmaster(macroeconcode)
 ;
 
 DROP TABLE IF EXISTS dbo_strategymaster;
-CREATE TABLE dbo_strategymaster (          
+CREATE TABLE dbo_strategymaster (
 strategycode        varchar(20),
 strategyname        varchar(50),
-PRIMARY KEY (strategycode) 
+PRIMARY KEY (strategycode)
 )
 ;
 
 DROP TABLE IF EXISTS dbo_algorithmmaster;
-CREATE TABLE dbo_algorithmmaster (          
+CREATE TABLE dbo_algorithmmaster (
 algorithmcode         varchar(50),
 algorithmname         varchar(50),
 PRIMARY KEY (algorithmcode)
@@ -108,7 +108,7 @@ PRIMARY KEY (algorithmcode)
 ;
 
 DROP TABLE IF EXISTS dbo_algorithmforecast;
-CREATE TABLE dbo_algorithmforecast (          
+CREATE TABLE dbo_algorithmforecast (
 forecastdate            date,
 instrumentid            int,
 forecastcloseprice      float,
@@ -121,7 +121,7 @@ FOREIGN KEY (algorithmcode) REFERENCES dbo_algorithmmaster(algorithmcode)
 ;
 
 DROP TABLE IF EXISTS dbo_actionsignals;
-CREATE TABLE dbo_actionsignals (          
+CREATE TABLE dbo_actionsignals (
 `date`                date,
 instrumentid          int,
 strategycode          varchar(20),
@@ -133,7 +133,7 @@ FOREIGN KEY (strategycode) REFERENCES dbo_strategymaster(strategycode)
 ;
 
 DROP TABLE IF EXISTS dbo_statisticalreturns;
-CREATE TABLE dbo_statisticalreturns(           
+CREATE TABLE dbo_statisticalreturns(
 `date`                 date,
 instrumentid           int,
 strategycode           varchar(20),
@@ -147,8 +147,8 @@ FOREIGN KEY (strategycode) REFERENCES dbo_strategymaster(strategycode)
 ;
 
 DROP TABLE IF EXISTS dbo_engineeredfeatures;
-CREATE TABLE dbo_engineeredfeatures(        
-`date`                       date,   
+CREATE TABLE dbo_engineeredfeatures(
+`date`                       date,
 instrumentid                 int,
 rsi_14                       float,
 macd_v                       float,
@@ -173,6 +173,9 @@ sema                         float,
 mema                         float,
 lema                         float,
 volume_delta                 float,
+kdj_k		                 float,
+kdj_d		                 float,
+cci_v						 float,
 FOREIGN KEY (`date`) REFERENCES dbo_datedim(`date`),
 FOREIGN KEY (instrumentid) REFERENCES dbo_instrumentmaster(instrumentid)
 )
@@ -205,8 +208,8 @@ FOREIGN KEY (algorithmcode) REFERENCES dbo_algorithmmaster(algorithmcode)
 ;
 
 DROP TABLE IF EXISTS dbo_paststatistics;
-CREATE TABLE dbo_paststatistics(        
-`date`                  date,   
+CREATE TABLE dbo_paststatistics(
+`date`                  date,
 high                    float,
 low                     float,
 `open`                  float,
