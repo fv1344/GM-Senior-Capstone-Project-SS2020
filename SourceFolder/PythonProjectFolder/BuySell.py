@@ -72,6 +72,98 @@ class BuySell:
                     insert_query = insert_query.format(date, ID, strategyCode, self.hold)
                     self.engine.execute(insert_query)
 
+
+    def kd_stochastics_signal(self):
+        """
+        Cross Moving Averages Buy/Sell signals
+        :return: none
+        """
+        query = 'SELECT * FROM %s' % self.table_name
+        df = pd.read_sql_query(query, self.engine)
+        strategyCode = "'kd'"
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_strategymaster WHERE strategycode=%s' % strategyCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0, 0] == 0:
+            strategyName = "'kd_stochastics'"
+            insert_code_query = 'INSERT INTO dbo_strategymaster VALUES({},{})'.format(strategyCode, strategyName)
+            self.engine.execute(insert_code_query)
+
+        # loop through instruments
+        for ID in df['instrumentid']:
+
+            # remove calculations from database
+            delete_query = 'DELETE FROM dbo_actionsignals WHERE instrumentid={} AND ' \
+                           'strategycode={}'.format(ID, strategyCode)
+            self.engine.execute(delete_query)
+
+            query = 'SELECT A.date, A.close, B.kdj_k, B.kdj_d FROM dbo_instrumentstatistics AS A, ' \
+                    'dbo_engineeredfeatures AS B WHERE A.instrumentid=B.instrumentid AND A.date=B.date ' \
+                    'AND A.instrumentid=%s' % ID
+            data = pd.read_sql_query(query, self.engine)
+
+            # Loop to insert into the actionsignals
+            for n in range(len(data)):
+                insert_query = "INSERT INTO dbo_actionsignals VALUES({},{},{},{})"
+                date = "'" + str(data['date'][n]) + "'"
+                if data['kdj_k'][n] and data['kdj_d'][n] < 20 and \
+                        data['kdj_k'][n] > data['kdj_d'][n]:
+                    insert_query = insert_query.format(date, ID, strategyCode, self.buy)
+                    self.engine.execute(insert_query)
+                elif data['kdj_k'][n] and data['kdj_d'][n] > 80 and \
+                        data['kdj_k'][n] < data['kdj_d'][n]:
+                    insert_query = insert_query.format(date, ID, strategyCode, self.sell)
+                    self.engine.execute(insert_query)
+                else:
+                    insert_query = insert_query.format(date, ID, strategyCode, self.hold)
+                    self.engine.execute(insert_query)
+
+    def cci_signal(self):
+        """
+        CCI Buy/Sell signals
+        :return: none
+        """
+        query = 'SELECT * FROM %s' % self.table_name
+        df = pd.read_sql_query(query, self.engine)
+        strategyCode = "'CCI'"
+
+        # add code to database if it doesn't exist
+        code_query = 'SELECT COUNT(*) FROM dbo_strategymaster WHERE strategycode=%s' % strategyCode
+        count = pd.read_sql_query(code_query, self.engine)
+        if count.iat[0,0] == 0:
+            strategyName = "'Commodity Channel Index'"
+            insert_code_query = 'INSERT INTO dbo_strategymaster VALUES({},{})'.format(strategyCode, strategyName)
+            self.engine.execute(insert_code_query)
+
+        # loop through instruments
+        for ID in df['instrumentid']:
+
+            # remove calculations from database
+            delete_query = 'DELETE FROM dbo_actionsignals WHERE instrumentid={} AND ' \
+                           'strategycode={}'.format(ID, strategyCode)
+            self.engine.execute(delete_query)
+
+            query = 'SELECT A.date, A.close, B.cci_v FROM dbo_instrumentstatistics AS A, ' \
+                    'dbo_engineeredfeatures AS B WHERE A.instrumentid=B.instrumentid AND A.date=B.date ' \
+                    'AND A.instrumentid=%s' % ID
+            data = pd.read_sql_query(query, self.engine)
+
+
+            # Loop to insert into the actionsignals
+            for n in range(len(data)):
+                insert_query = "INSERT INTO dbo_actionsignals VALUES({},{},{},{})"
+                date = "'" + str(data['date'][n]) + "'"
+                if  data['cci_v'][n] > 100:
+                    insert_query = insert_query.format(date, ID, strategyCode, self.buy)
+                    self.engine.execute(insert_query)
+                elif data['cci_v'][n] < -100:
+                    insert_query = insert_query.format(date, ID, strategyCode, self.sell)
+                    self.engine.execute(insert_query)
+                else:
+                    insert_query = insert_query.format(date, ID, strategyCode, self.hold)
+                    self.engine.execute(insert_query)
+
     def frl_signal(self):
         """
         Fibonacci Retracement Line Buy/Sell signals
@@ -272,5 +364,7 @@ class BuySell:
                 else:
                     insert_query = insert_query.format(date, ID, strategyCode, self.hold)
                     self.engine.execute(insert_query)
+
+
 
 # END CODE MODULE
