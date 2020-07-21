@@ -25,9 +25,10 @@ update_msf_forecast = False             # Pass 3.2  (Takes around 3 minutes)
 update_engineered_features = False      # Pass 2
 update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
 update_signals = False                  # Pass 4    (Takes around 5-10 minutes
-run_simulator = False                   # Pass 5    (Takes around 15 minutes)
-update_ars_forecast = True             # Pass 3.3
-update_fjf_forecast = True
+run_simulator = False                  # Pass 5    (Takes around 15 minutes)
+update_ars_forecast = False             # Pass 3.3
+update_fjf_forecast = False
+update_lr_forecast = True
 
 """
     OPERATIONS BELOW
@@ -122,6 +123,10 @@ if update_signals:
     # forecast-based signals
     signals.algo_signal()
 
+    signals.cci_signal()
+
+    signals.kd_stochastics_signal()
+
 if run_simulator:
     # Run Trade Simulations Based on Trade Signals
     simulator = TradingSimulator(db_engine, instrument_master)
@@ -135,7 +140,13 @@ if run_simulator:
 if update_ars_forecast:
     my = DataForecast(db_engine, instrument_master)
     my.calculate_ars_forecast('2020-06-17', '2020-07-17', 15, False, True, True, False)
-    
+
 if update_fjf_forecast:
     my = DataForecast(db_engine, instrument_master)
     my.FJF()
+
+if update_lr_forecast:
+    # Get raw data from database to calculate forecasts
+    forecast = DataForecast(db_engine, instrument_master)
+
+    forecast.calculate_lr_forecast()
