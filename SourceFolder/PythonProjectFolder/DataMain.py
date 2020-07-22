@@ -137,9 +137,6 @@ if update_signals:
     # forecast-based signals
     signals.algo_signal()
 
-    signals.cci_signal()
-
-    signals.kd_stochastics_signal()
 
 if run_simulator:
     print("Running Investment Simulator...")
