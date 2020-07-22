@@ -53,13 +53,6 @@ class EngineeredFeatures:
             data['boll_ub_v'] = stock_df['boll_ub']
             data['open_2_sma'] = stock_df['open_2_sma']
             data['volume_delta'] = stock_df['volume_delta']
-            data['kdj_k'] = stock_df['kdjk']
-            data['kdj_d'] = stock_df['kdjd']
-            data['kdj_j'] = stock_df['kdjj']
-            # CCI, default to 14 days
-            data['cci_v'] = stock_df['cci_14']
-
-
 
             # delete unnecessary columns
             del data['high'], data['low'], data['open'], data['volume'], data['close_-1_s'], data['close_-1_d'], \
@@ -98,7 +91,7 @@ class EngineeredFeatures:
                         index=False, dtype={'date': sal.Date, 'instrumentid': sal.INT, 'rsi_14': sal.FLOAT,
                                             'macd_v': sal.FLOAT, 'macds_v': sal.FLOAT, 'boll_v': sal.FLOAT,
                                             'boll_ub_v': sal.FLOAT, 'boll_lb_v': sal.FLOAT, 'open_2_sma': sal.FLOAT,
-                                            'volume_delta': sal.FLOAT, 'kdj_k': sal.FLOAT,'kdj_d': sal.FLOAT,'kdj_j': sal.FLOAT, 'cci_v': sal.FLOAT, 'wcma': sal.FLOAT, 'scma': sal.FLOAT,
+                                            'volume_delta': sal.FLOAT, 'wcma': sal.FLOAT, 'scma': sal.FLOAT,
                                             'lcma': sal.FLOAT, 'ltrough': sal.FLOAT, 'lpeak': sal.FLOAT,
                                             'highfrllinelong': sal.FLOAT, 'medfrllinelong': sal.FLOAT,
                                             'lowfrllinelong': sal.FLOAT, 'strough': sal.FLOAT, 'speak': sal.FLOAT,
