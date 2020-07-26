@@ -60,8 +60,11 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 	* fredapi 		(PIP script: pip install fredpi) 
 	* pytest 		(PIP script: pip install pytest) 
 	* pymysql		(PIP script: pip install pymysql) 
-	* pyodbc			(PIP script: pip install pyodbc)
+	* pyodbc		(PIP script: pip install pyodbc)
 	* matplotlib		(PIP script: pip install matplotlib)
+	* keras			(PIP script: pip install keras)
+	* tensorflow		(PIP script: pip install tensorflow)
+	* holidays		(PIP script: pip install holidays)
 
 6. Run DataMain.py in PyCharm
 
