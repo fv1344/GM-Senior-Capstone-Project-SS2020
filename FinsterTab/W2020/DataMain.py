@@ -6,6 +6,7 @@ from FinsterTab.W2020.BuySell import BuySell
 from FinsterTab.W2020.EngineeredFeatures import EngineeredFeatures
 from FinsterTab.W2020.TradingSimulator import TradingSimulator
 import FinsterTab.W2020.AccuracyTest
+import unittest
 
 """ 
     Variables
@@ -24,10 +25,10 @@ instrument_master = 'dbo_instrumentmaster'
 update_close_stats = False              # Pass 1.1
 reset_date_dim = False                 # Pass 1.2  (Takes around 5 minutes)
 update_macro_stats = False              # Pass 1.3
-update_msf_forecast = False             # Pass 3.2  (Takes around 3 minutes)
+update_msf_forecast = True             # Pass 3.2  (Takes around 3 minutes)
 update_engineered_features = False      # Pass 2
-update_remaining_forecasts = True     # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
-update_signals = True                  # Pass 4    (Takes around 5-10 minutes
+update_remaining_forecasts = False     # Pass 3.1  (Takes around 1 hour. Saving "old forecasts" is paradoxical)
+update_signals = False                  # Pass 4    (Takes around 5-10 minutes
 run_simulator = False                   # Pass 5    (Takes around 15 minutes)
 update_ars_forecast = False             # Pass 3.3
 update_fjf_forecast = False
@@ -37,7 +38,11 @@ update_fjf_forecast = False
 
 # Create database connection
 db_engine = DBEngine().mysql_engine()
-
+#Set the update_close_stats as True
+#Set the update_macro_stats as True
+#Check back in the database specifically for dbo_instrumentstatistics and dbo_macroeconstatistics tables for updated data
+#If yes, uncomment the following line:
+#print('Instrument master and Macroecon master updated, indicating MySQL and Python connection established')
 
 if update_close_stats:
     # Get raw market data
@@ -62,10 +67,11 @@ if update_macro_stats:
 
 if update_msf_forecast:
     DataForecast.MSF1(db_engine)
-    DataForecast.MSF2(db_engine)
-    DataForecast.MSF3(db_engine)
-    DataForecast.MSF2_Past_Date(db_engine)
-    DataForecast.MSF_new(db_engine)
+    #DataForecast.MSF2(db_engine)
+    DataForecast.MSF_final(db_engine)
+    #DataForecast.MSF3(db_engine)
+    #DataForecast.MSF2_Past_Date(db_engine)
+
 
 if update_engineered_features:
     # Get raw data from database to calculate forecasts
@@ -78,13 +84,13 @@ if update_remaining_forecasts:
     forecast = DataForecast(db_engine, instrument_master)
     # Polynomial regression function
     # Takes a while to run, comment out if need be
-    forecast.calculate_regression("2019-07-15",20,5)
+    forecast.calculate_regression()
     # calculate and store price predictions
     forecast.calculate_forecast()
     # calculate and store ARIMA forecast
     forecast.calculate_arima_forecast()
     # calculate and store Random Forest forecast
-    forecast.calculate_random_forest_forecast("2019-07-15")
+    forecast.calculate_random_forest_forecast()
     # flawed price prediction from previous semesters, without our improvements
     forecast.calculate_forecast_old()
     # calculate and store SVM forecast
@@ -125,3 +131,32 @@ if update_fjf_forecast:
     my = DataForecast(db_engine, instrument_master)
     #my.FJF1()
     my.FJF2()
+
+#Uncomment the following lines when testing is required
+#engine = DBEngine().mysql_engine()
+#fetch = DataFetch(engine, 'dbo_instrumentmaster')
+#Uncomment the following test cases as required
+''''
+class MyTestCase(unittest.TestCase):
+
+    def test_1_if_Quandl_Variables_Present(self):
+
+        query = 'SELECT * FROM dbo_macroeconmaster WHERE accesssource = "Quandl"'
+        result = pd.read_sql_query(query, engine)
+
+        assert result is not None
+
+    def test_2_if_Fred_Variables_Present(self):
+
+        query = 'SELECT * FROM dbo_macroeconmaster WHERE accesssource = "FRED"'
+        result = pd.read_sql_query(query, engine)
+
+        assert result is not None
+
+
+    def test_3_if_Yahoo_Variables_Present(self):
+        query = 'SELECT * FROM dbo_macroeconmaster WHERE accesssource = "Yahoo"'
+        result = pd.read_sql_query(query, engine)
+
+        assert result is not None
+        '''''

@@ -130,15 +130,14 @@ def MSF1_accuracy(self):
 
     # These are the date ranges we are working with
     # start_date represents the starting date for the forecasts and the end of the training dates
-    start_date = "'2018-01-01'"
+    start_date = "'2019-01-01'"
     # end_date represents the date for which the forecasting ends
-    end_date = "'2020-01-04'" #program running with this date, but no change in results
+    end_date = "'2020-01-08'" #program running with this date, but no change in results
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
-    train_date = "'2016-01-01'"
+    train_date = "'2015-01-01'"
 
     # Bool to determine whether we append to dbo_tempvisualize or replace the values
     to_append = False #not working with "True" value
-
     # Create a for loop to iterate through all of the instrument ids
     for v in id2['instrumentid']:
         # Initializes a list for which we will eventually be storing all data to add to the macroeconalgorithm database table
@@ -270,7 +269,7 @@ def MSF1_accuracy(self):
         to_append = True
 
 
-        # Populates absolute_percent_error with the calculated percent error for a specific data point
+        # Populates absolute_percent_error with the calculated Mean absolute percent error for a specific data point
         absolute_percent_error = []
         for i in range(n):
             absolute_percent_error.append(abs((df['close'].loc[i] - df['forecastcloseprice'].loc[i]) / df['close'].loc[i]))
@@ -326,11 +325,11 @@ def MSF2_accuracy(self):
 
     # These are the date ranges we are working with
     # start_date represents the starting date for the forecasts and the end of the training dates
-    start_date = "'2018-01-01'"
+    start_date = "'2019-01-01'"
     # end_date represents the date for which the forecasting ends
-    end_date = "'2020-01-01'"
+    end_date = "'2020-01-10'"
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
-    train_date = "'2016-01-01'"
+    train_date = "'2015-01-01'"
 
 
     #Loops through each instrument id to preform error calculations 1 instrument at a time
@@ -378,7 +377,7 @@ def MSF2_accuracy(self):
         #Preforms the actual calculations and stores them in an array called calculated forecast
         calculated_forecast = []
         for k in range(n):
-            stat = indicators['GDP'][k] * 1 - (indicators['UR'][k] * 0 + indicators['IR'][k] * .5) - (
+            stat = indicators['GDP'][k] * 1 - (indicators['UR'][k] * 0 + indicators['IR'][k] * .5 + indicators['COVI'][k] *.5) - (
                         indicators['MI'][k] * indicators['MI'][k])
             stat = (stat * train_data['close'].iloc[n-1]) + train_data['close'].iloc[n-1]
             calculated_forecast.append(stat)
@@ -398,8 +397,7 @@ def MSF2_accuracy(self):
         # Calculates accuracy
         percent_error = []
         temp_error = 0
-        for x in range((len(df) - 1)):
-            # Check if upward or downward trend
+        for x in range((len(df) - 1)):            # Check if upward or downward trend
             if (df['close'][x + 1] > df['close'][x] and df['forecastcloseprice'][x + 1] > df['forecastcloseprice'][x]) or \
                     (df['close'][x + 1] < df['close'][x] and df['forecastcloseprice'][x + 1] < df['forecastcloseprice'][x]):
                 count += 1
@@ -418,7 +416,7 @@ def MSF2_accuracy(self):
             #Calculate sum of percent error and find average
 
             gm_average_percent_error = sum(gm_absolute_percent_error) / 8
-            #print("Average percent error of MSF2 on GM stock is: ", gm_average_percent_error * 100, "%")
+            print("Average percent error of MSF_final on GM stock is: ", gm_average_percent_error * 100, "%")
 
         if df['instrumentid'][i] == 2:
             pfe_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
@@ -427,7 +425,7 @@ def MSF2_accuracy(self):
             #Calculate sum of percent error and find average
 
             pfe_average_percent_error = sum(pfe_absolute_percent_error) / 8
-            #print("Average percent error of MSF2 on PFE stock is: ", pfe_average_percent_error * 100, "%")
+            print("Average percent error of MSF_final on PFE stock is: ", pfe_average_percent_error * 100, "%")
 
         if df['instrumentid'][i] == 3:
             spy_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
@@ -436,7 +434,7 @@ def MSF2_accuracy(self):
             #Calculate sum of percent error and find average
 
             spy_average_percent_error = sum(spy_absolute_percent_error) / 8
-            #print("Average percent error of MSF2 on S&P 500 stock is: ", spy_average_percent_error * 100, "%")
+            print("Average percent error of MSF_final on S&P 500 stock is: ", spy_average_percent_error * 100, "%")
 
         if df['instrumentid'][i] == 4:
             xph_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
@@ -445,7 +443,7 @@ def MSF2_accuracy(self):
             #Calculate sum of percent error and find average
 
             xph_average_percent_error = sum(xph_absolute_percent_error) / 8
-            #print("Average percent error of MSF2 on XPH stock is: ", xph_average_percent_error * 100, "%")
+            print("Average percent error of MSF2 on XPH stock is: ", xph_average_percent_error * 100, "%")
 
         if df['instrumentid'][i] == 5:
             carz_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
@@ -454,7 +452,7 @@ def MSF2_accuracy(self):
             #Calculate sum of percent error and find average
 
             carz_average_percent_error = sum(carz_absolute_percent_error) / 8
-            #print("Average percent error of MSF2 on CARZ index stock is: ", carz_average_percent_error * 100, "%")
+            print("Average percent error of MSF_final on CARZ index stock is: ", carz_average_percent_error * 100, "%")
 
         if df['instrumentid'][i] == 6:
             tyx_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
@@ -463,15 +461,50 @@ def MSF2_accuracy(self):
             #Calculate sum of percent error and find average
 
             tyx_average_percent_error = sum(tyx_absolute_percent_error) / 8
-            #print("Average percent error of MSF2 on TYX 30-YR bond is: ", tyx_average_percent_error * 100, "%")
+            print("Average percent error of MSF_final on TYX 30-YR bond is: ", tyx_average_percent_error * 100, "%")
 
+        if df['instrumentid'][i] == 7:
+            fcau_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
+            fcau_absolute_percent_error = [abs(ele) for ele in fcau_temp_error]
 
+            #Calculate sum of percent error and find average
+
+            fcau_average_percent_error = sum(fcau_absolute_percent_error) / 8
+            print("Average percent error of MSF_final on FCAU bond is: ", fcau_average_percent_error * 100, "%")
+
+        if df['instrumentid'][i] == 8:
+            tm_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
+            tm_absolute_percent_error = [abs(ele) for ele in tm_temp_error]
+
+            #Calculate sum of percent error and find average
+
+            tm_average_percent_error = sum(tm_absolute_percent_error) / 8
+            print("Average percent error of MSF_final on Toyota Motors: ", tm_average_percent_error * 100, "%")
+
+        if df['instrumentid'][i] == 9:
+            ford_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
+            ford_absolute_percent_error = [abs(ele) for ele in ford_temp_error]
+
+            #Calculate sum of percent error and find average
+
+            ford_average_percent_error = sum(ford_absolute_percent_error) / 8
+            print("Average percent error of MSF_final on Ford stock: ", ford_average_percent_error * 100, "%")
+
+        if df['instrumentid'][i] == 10:
+            hmc_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
+            hmc_absolute_percent_error = [abs(ele) for ele in hmc_temp_error]
+
+            #Calculate sum of percent error and find average
+
+            hmc_average_percent_error = sum(hmc_absolute_percent_error) / 8
+            print("Average percent error of MSF_final on HMC: ", hmc_average_percent_error * 100, "%")
 
         d = len(df)
         b = (count / d) * 100
         #Prints the trend accuracy
         #print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
 
+#End of MSF_final accuracy tests
 
 #Create weightings MSF2 runs the MSF2 algorithm for past dates and compares them to actual instrument prices, generating a percent error calculation
 #We then iterate through several different weightings and we compare each percent error for each instrument and determine the weightings with the lowest percent error
@@ -482,8 +515,8 @@ def create_weightings_MSF2(self, setWeightings):
     data = pd.read_sql_query(query, self.engine)
 
     # Query to grab the instrumentid and instrument name from the instrumentmaster database table
-    # New instruments added SS2020 and we abandoned MSF so just limit to the ones they worked on (aka first 6)
-    query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster LIMIT 6'
+    # New instruments added SS2020 so, total instruments are 10 now
+    query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
     data1 = pd.read_sql_query(query, self.engine)
 
     # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
@@ -516,7 +549,7 @@ def create_weightings_MSF2(self, setWeightings):
     # end_date represents the date for which the forecasting ends
     end_date = "'2020-01-01'"
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
-    train_date = "'2016-01-01'"
+    train_date = "'2015-01-01'"
 
 
     # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
@@ -650,7 +683,12 @@ def create_weightings_MSF2(self, setWeightings):
                       3: [2.55, 3.3, 0.7],
                       4: [0.04999999999999982, 3.05, 0.7],
                       5: [-4.7, 3.3, 0.44999999999999996],
-                      6: [-1.2000000000000002, -3.7, -0.8]}
+                      6: [-1.2000000000000002, -3.7, -0.8],
+                      7: [2.55, 3.3, 0.7],
+                      8: [0.04999999999999982, 3.05, 0.7],
+                      9: [-4.7, 3.3, 0.44999999999999996],
+                      10: [-1.2000000000000002, -3.7, -0.8]
+                      }
 
         # We now iterate through the instrument ids
         for x in ikeys:
@@ -713,14 +751,14 @@ def create_weightings_MSF2(self, setWeightings):
 
             # Print statements to view the average percent error, trend error, and best weightings
             print("The lowest avg percent error is %.7f%% for instrumentID %d" % (avg_error * 100, ikeys[x]),
-                  ' for function: MSF2')
-            print("The weightings are: ", best_weightings, ' for function: MSF2')
+                  ' for function: MSF_final')
+            print("The weightings are: ", best_weightings, ' for function: MSF_final')
             print('The trend accuracy is: ', trend_error)
 
             # visual_comparisons will be used to store the past forecasted prices so we can visualize them compared to actual instrument prices on a graph
             visual_comparisons = []
             for k in range(n):
-                visual_comparisons.append([dates[k], ikeys[x], stat_check[k], 'MSF2'])
+                visual_comparisons.append([dates[k], ikeys[x], stat_check[k], 'MSF_final'])
             df1 = pd.DataFrame(visual_comparisons,
                                columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
             df1.to_sql('dbo_tempvisualize', self.engine,
