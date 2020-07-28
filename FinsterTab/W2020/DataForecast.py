@@ -1,4 +1,5 @@
 # import libraries to be used in this code module
+import numpy
 import pandas as pd
 from statsmodels.tsa.arima_model import ARIMA
 from sklearn.ensemble import RandomForestRegressor
@@ -1987,7 +1988,7 @@ class DataForecast:
         # The weightings returned are used in the calculation below
         weightings = FinsterTab.W2020.DataForecast.create_weightings_MSF_final(self.engine, setWeightings)
 
-        n = 12
+        n = 15
 
         # Getting Dates for Future Forecast #
         # --------------------------------------------------------------------------------------------------------------#
@@ -2133,7 +2134,7 @@ class DataForecast:
         #After the above loop is completed, the macroeconalgorithmforecast table will be populated with quarterly forecast made by MSF_final algorithm code
 
     def MSF_final_accuracy(self):
-        n = 12
+        n = 15
     #Used previous semester's accuracy function to fit the style of how the MSF_final function is written
         # Gets the macro economic variables codes and names to loop through the inidividual macro variables
         query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
@@ -2376,7 +2377,7 @@ class DataForecast:
         weightings = {}
 
         # n represents the number of datapoints we are working with (represented in quarters)
-        n = 12
+        n = 15
 
         # These are the date ranges we are working with
         # start_date represents the starting date for the forecasts and the end of the training dates
@@ -2474,9 +2475,9 @@ class DataForecast:
 
                             # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
                             # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
-                            temp_avg_error, temp_trend_error, dates = weight_check(DBEngine().mysql_engine(),
-                                                                                   stat_check, ikeys[x], n, 'MSF_final',
-                                                                                   start_date, end_date)
+                            temp_avg_error, temp_trend_error, dates = FinsterTab.weight_check(DBEngine().mysql_engine(),
+                                                                                              stat_check, ikeys[x], n, 'MSF_final',
+                                                                                              start_date, end_date)
 
                             # Check to see if the best_avg_error has been initialized to a valid average percent error, if not then no average error or trend error has been calculated yet
                             if (best_avg_error < 0):
