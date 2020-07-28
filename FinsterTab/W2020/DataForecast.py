@@ -1930,6 +1930,7 @@ class DataForecast:
         # This algorithm uses weightings strategy for the macro variables so, setWeightings needs to be True
         # The weights function is written separately below this algorithm
         #Accuracy and error functions are separately written below this algorithm
+        #It also attempts to include the monthly moving average concept infused to try to improve the accuracy compared to MSF1
 
         setWeightings = False
         #Set to false now becuase of the weightings function not applying properly to all the instruments.
@@ -2081,7 +2082,7 @@ class DataForecast:
                     "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
                     "MONTH(z.date) = 12)".format(ikeys[x], currentDate)
 
-            # Then we execute the query and store the returned values in instrumentStats, and grab the last n stats from the dataframe as we are only using n datapoints
+            # Then we execute the query and store the returned values in instrumentStats, and grab the latest n stats from the dataframe as we are only using n datapoints
             instrumentStats = pd.read_sql_query(query, self.engine)
             instrumentStats = instrumentStats.tail(n)
 
