@@ -11,24 +11,43 @@ import SourceFolder.PythonProjectFolder.AccuracyTest
 instrument_master = 'dbo_instrumentmaster'
 
 """
-    TOGGLE THE FOLLOWING BOOLEANS TO RUN THE DESIRED PORTIONS OF THE APPLICATION
-    Phase 1: Set up db
-    Phase 2: Engineered data
-    Phase 3: Predictive data
-    Phase 4: Signals
-    Phase 5: Simulation
+    THESE PHASES ARE THE ORDER TO RUN THE APPLICATION FOR PROPER INITIAL POPULATION
+    EACH SUCCESSIVE RUN CAN BE CUSTOMIZED USING THE BOOLEAN VARIABLES BELOW
+    Phase 1: Populate the date dimension
+    Phase 2: Collect the source data
+    Phase 3: Calculate engineered data from close prices
+    Phase 4: Forecast close prices
+    Phase 5: Generate Buy/Sell signals
+    Phase 6: Run investment simulation
 """
-update_close_stats = False              # Pass 1.1
-reset_date_dim = False                  # Pass 1.2  (Takes around 1 minute)
-update_macro_stats = False              # Pass 1.3
-update_msf_forecast = False             # Pass 3.2  (Takes around 3 minutes)
-update_engineered_features = False      # Pass 2
-update_remaining_forecasts = False      # Pass 3.1  (Takes around 1 hour)
-update_signals = False                  # Pass 4    (Takes around 5-10 minutes)
-run_simulator = False                   # Pass 5    (Takes around 15 minutes)
-update_ars_forecast = False             # Pass 3.3
+
+"""
+    TOGGLE THE FOLLOWING BOOLEANS TO RUN THE DESIRED PORTIONS OF THE APPLICATION
+    COMMENTED BOOLEANS REPRESENT PORTIONS OF RUNTIME INTENSIVE FUNCTIONS (RUNTIME WILL VARY BETWEEN MACHINES)
+"""
+
+# Populate the date dimension
+reset_date_dim = False                  # (Takes around 1 minute)
+
+# Collect the source data
+update_close_stats = False
+update_macro_stats = False
+
+# Calculate engineered data from close prices
+update_engineered_features = False
+
+# Forecast close prices
+update_msf_forecast = False             # (Takes around 3 minutes)
+update_ars_forecast = False
 update_fjf_forecast = False
 update_lr_forecast = False
+update_remaining_forecasts = False      # (Takes around 1 hour)
+
+# Generate Buy/Sell signals
+update_signals = False                  # (Takes around 5-10 minutes)
+
+# Run investment simulation
+run_simulator = False                   # (Takes around 15 minutes)
 
 """
     OPERATIONS BELOW
