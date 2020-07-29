@@ -46,7 +46,6 @@ def get_past_data(self):
                 dtype={'date': sal.Date, 'open': sal.FLOAT, 'high': sal.FLOAT, 'low': sal.FLOAT,
                                'close': sal.FLOAT, 'adj close': sal.FLOAT, 'volume': sal.FLOAT})
 
-
 # Tests the accuracy of the old functions
 def accuracy(self):
     query = 'SELECT * FROM dbo_algorithmmaster'
@@ -73,7 +72,6 @@ def accuracy(self):
                          df['forecastcloseprice'][
                              x]):
                     count += 1
-
 
             # Populates absolute_percent_error with the calculated percent error for a specific data point
             absolute_percent_error = []
@@ -159,7 +157,6 @@ def MSF1_accuracy(self):
         # instrument_stats will hold the closing prices and the dates for the dates we are forecasting for
         instrument_stats = pd.read_sql_query(query, self.engine)
 
-
         # We isolate the dates and closing prices into individual arrays to make them easier to work with
         date = []
         close = []
@@ -178,7 +175,6 @@ def MSF1_accuracy(self):
         for i in date:
             temp = {i: []}
             median_forecast.update(temp)
-
 
         # This query will grab quarterly instrument prices from between 2014 and the current date to be used in the forecasting
         query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
@@ -264,11 +260,9 @@ def MSF1_accuracy(self):
         df = pd.DataFrame(data, columns=['forecastdate', 'instrumentid', 'macroeconcode',
                                         'forecastcloseprice', 'close', 'algorithmcode', 'prederror'])
 
-
         df1 = pd.DataFrame(data1, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
         df1.to_sql('dbo_tempvisualize', self.engine, if_exists=('replace' if not to_append else 'append'), index=False)
         to_append = True
-
 
         # Populates absolute_percent_error with the calculated percent error for a specific data point
         absolute_percent_error = []
@@ -299,9 +293,6 @@ def MSF1_accuracy(self):
 
         # return the average percent error calculated above
 
-
-
-
 # This function is not currently used, it can be used to check the accuracy of MSF2 but will need set weightings
 # The functions below this one will test the accuracy using a variety of weightings and choose the weightings with the best results
 def MSF2_accuracy(self):
@@ -331,7 +322,6 @@ def MSF2_accuracy(self):
     end_date = "'2020-01-01'"
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
     train_date = "'2016-01-01'"
-
 
     #Loops through each instrument id to preform error calculations 1 instrument at a time
     for i in instrumentids:
@@ -383,7 +373,6 @@ def MSF2_accuracy(self):
             stat = (stat * train_data['close'].iloc[n-1]) + train_data['close'].iloc[n-1]
             calculated_forecast.append(stat)
 
-
         #Creates and inserts the forecast dates, instrument ids, calculated forecast prices, and actual close prices into an array
         results = []
         for k in range(n):
@@ -392,7 +381,6 @@ def MSF2_accuracy(self):
         #Creates a dataframe out of the array created above
         df = pd.DataFrame(results, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'close'])
         #print(df)
-
 
         count = 0
         # Calculates accuracy
@@ -406,7 +394,6 @@ def MSF2_accuracy(self):
             temp_error = abs((df['close'][x] - df['forecastcloseprice'][x]))/df['close']
 
         #Percent Error calculation
-
         temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
         absolute_percent_error = [abs(ele) for ele in temp_error]
         percent_error.append(absolute_percent_error)
@@ -416,7 +403,6 @@ def MSF2_accuracy(self):
             gm_absolute_percent_error = [abs(ele) for ele in gm_temp_error]
 
             #Calculate sum of percent error and find average
-
             gm_average_percent_error = sum(gm_absolute_percent_error) / 8
             #print("Average percent error of MSF2 on GM stock is: ", gm_average_percent_error * 100, "%")
 
@@ -425,7 +411,6 @@ def MSF2_accuracy(self):
             pfe_absolute_percent_error = [abs(ele) for ele in pfe_temp_error]
 
             #Calculate sum of percent error and find average
-
             pfe_average_percent_error = sum(pfe_absolute_percent_error) / 8
             #print("Average percent error of MSF2 on PFE stock is: ", pfe_average_percent_error * 100, "%")
 
@@ -434,7 +419,6 @@ def MSF2_accuracy(self):
             spy_absolute_percent_error = [abs(ele) for ele in spy_temp_error]
 
             #Calculate sum of percent error and find average
-
             spy_average_percent_error = sum(spy_absolute_percent_error) / 8
             #print("Average percent error of MSF2 on S&P 500 stock is: ", spy_average_percent_error * 100, "%")
 
@@ -443,7 +427,6 @@ def MSF2_accuracy(self):
             xph_absolute_percent_error = [abs(ele) for ele in xph_temp_error]
 
             #Calculate sum of percent error and find average
-
             xph_average_percent_error = sum(xph_absolute_percent_error) / 8
             #print("Average percent error of MSF2 on XPH stock is: ", xph_average_percent_error * 100, "%")
 
@@ -452,7 +435,6 @@ def MSF2_accuracy(self):
             carz_absolute_percent_error = [abs(ele) for ele in carz_temp_error]
 
             #Calculate sum of percent error and find average
-
             carz_average_percent_error = sum(carz_absolute_percent_error) / 8
             #print("Average percent error of MSF2 on CARZ index stock is: ", carz_average_percent_error * 100, "%")
 
@@ -461,17 +443,13 @@ def MSF2_accuracy(self):
             tyx_absolute_percent_error = [abs(ele) for ele in tyx_temp_error]
 
             #Calculate sum of percent error and find average
-
             tyx_average_percent_error = sum(tyx_absolute_percent_error) / 8
             #print("Average percent error of MSF2 on TYX 30-YR bond is: ", tyx_average_percent_error * 100, "%")
-
-
 
         d = len(df)
         b = (count / d) * 100
         #Prints the trend accuracy
         #print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
-
 
 #Create weightings MSF2 runs the MSF2 algorithm for past dates and compares them to actual instrument prices, generating a percent error calculation
 #We then iterate through several different weightings and we compare each percent error for each instrument and determine the weightings with the lowest percent error
@@ -517,7 +495,6 @@ def create_weightings_MSF2(self, setWeightings):
     end_date = "'2020-01-01'"
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
     train_date = "'2016-01-01'"
-
 
     # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
     for i in keys:
@@ -602,7 +579,6 @@ def create_weightings_MSF2(self, setWeightings):
                                 stat_check.append(stat)
                                 temp_price = stat
 
-
                         # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
                         # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
                         temp_avg_error, temp_trend_error, dates = weight_check(DBEngine().mysql_engine(), stat_check, ikeys[x], n, 'MSF2', start_date, end_date)
@@ -677,7 +653,6 @@ def create_weightings_MSF2(self, setWeightings):
 
             # Best forecast prices will be used to store the forecast prices for the best weightings to store them in a database for visual comparison later
             best_forecast_prices = []
-
 
             # We intialize a list to store the resulting forecasted prices to compare in another function
             stat_check = []
@@ -809,7 +784,6 @@ def create_weightings_MSF2_Past_Dates(self):
 
     instrumentStats = instrumentStats.tail(n)
 
-
     #Best weightings will be used to store the best weightings for each instrument
     best_weightings = [0, 0, 0]
 
@@ -849,7 +823,6 @@ def create_weightings_MSF2_Past_Dates(self):
                         stat_check.append(stat)
                         temp_price = stat
 
-
                 # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
                 # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
                 temp_avg_error, temp_trend_error, dates = weight_check(DBEngine().mysql_engine(), stat_check, 3, n, 'past', start_date, end_date)
@@ -883,7 +856,6 @@ def create_weightings_MSF2_Past_Dates(self):
     for k in range(n):
         visual_comparisons.append([dates[k], 3, best_forecast_prices[k], 'MSF2 Past Dates'])
 
-
     query = 'SELECT algorithmcode FROM dbo_tempvisualize'
     setWeightingsCheck = pd.read_sql_query(query, self.engine)
 
@@ -895,11 +867,8 @@ def create_weightings_MSF2_Past_Dates(self):
     df1.to_sql('dbo_tempvisualize', self.engine,
                if_exists=('replace' if toReplace else 'append'), index=False)
 
-
     # The weightings for each instrument ID are returned to dataforecast and used for prediction
     return weightings
-
-
 
 #Create weightings MSF3 runs the MSF3 algorithm for past dates and compares them to actual instrument prices, generating a percent error calculation
 #We then iterate through several different weightings and we compare each percent error for each instrument and determine the weightings with the lowest percent error
@@ -912,7 +881,6 @@ def create_weightings_MSF3(self, setWeightings):
     #Query to grab the instrumentid and instrument name from the instrumentmaster database table
     query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster LIMIT 6'
     data1 = pd.read_sql_query(query, self.engine)
-
 
     #Keys is a dictionary that will be used to store the macro econ code for each macro econ name
     keys = {}
@@ -1095,7 +1063,6 @@ def create_weightings_MSF3(self, setWeightings):
             # Best forecast prices will be used to store the forecast prices for the best weightings to store them in a database for visual comparison later
             best_forecast_prices = []
 
-
             # We intialize a list to store the resulting forecasted prices to compare in another function
             stat_check = []
 
@@ -1164,7 +1131,6 @@ def weight_check(self, calculated_forecast, instrumentid, n, function_name, star
                 "MONTH(z.date) = 12)".format(instrumentid, start_date, end_date)
         check_data = pd.read_sql_query(query, self.engine)
 
-
     # Gets the dates for the future forecast prices so they match the instrument statistics
     dates = []
     for l in check_data['date']:
@@ -1228,5 +1194,3 @@ db_engine = DBEngine().mysql_engine()
 # instrument_master = 'dbo_instrumentmaster'
 # forecast = DataForecast(db_engine, instrument_master)
 # forecast.calculate_accuracy_train()
-
-
