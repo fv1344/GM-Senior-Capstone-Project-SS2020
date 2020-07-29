@@ -78,7 +78,7 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 
 1. Open Power BI Desktop
 
-2. Select Get data from the Home tab
+2. Select 'Get data' from the Home tab
 
 3. Search for and select MySQL database
 
@@ -88,4 +88,4 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 
 6. Cancel the Navigator window
 
-7. Import a report template using the Import button in the File tab (GM-Senior-Capstone-Project-SS2020 -> SourceFolder -> SupplementalMaterial -> Power BI -> 'x'.pbit)
+7. Import a report template using the 'Import' button in the File tab (GM-Senior-Capstone-Project-SS2020 -> SourceFolder -> SupplementalMaterial -> Power BI -> 'x'.pbit)
