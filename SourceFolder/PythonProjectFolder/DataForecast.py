@@ -572,16 +572,25 @@ class DataForecast:
                 print("Mean Absolute Error: ${:.2f}".format(mae))
                 print("Mean Absolute Percentage Error: {:.2f}%".format(mape))
 
-    def calculate_lr_forecast(self):
+        def calculate_lr_forecast(self):
         """
-        Calculate historic next-day returns based on LR
-        and 30 days of future price forecast
-        Each prediction is made using last 30 business days' close prices
+        first for loop calculates todays prediction, second for loop calculates into thirdy days
         """
         # get InstrumentsMaster table from database
         query = 'SELECT * FROM {}'.format(self.table_name)
         df = pd.read_sql_query(query, self.engine)
         algoCode = "'lr'"
+
+        print("GM")
+        print("PFE")
+        print("SPY")
+        print("XPH")
+        print("CARZ")
+        print("TYX")
+        print("FCAU")
+        print("TM")
+        print("F")
+        print("HFMC")
 
         # add code to database if it doesn't exist
         code_query = 'SELECT COUNT(*) FROM dbo_algorithmmaster WHERE algorithmcode=%s' % algoCode
@@ -590,7 +599,7 @@ class DataForecast:
             algoName = "'Linear Regression'"
             insert_code_query = 'INSERT INTO dbo_algorithmmaster VALUES({},{})'.format(algoCode, algoName)
             self.engine.execute(insert_code_query)
-
+        # this forloop below predicts forecast price for today
         for ID in df['instrumentid']:
             # remove future prediction dates -
             remove_future_query = 'DELETE FROM dbo_AlgorithmForecast WHERE AlgorithmCode={} AND PredError=0 AND ' \
@@ -610,22 +619,24 @@ class DataForecast:
                 self.engine.execute(delete_query)
 
             # get closing price and the date from database
+            # these are are independent variables
             data_query = 'SELECT Date, Close FROM dbo_InstrumentStatistics WHERE InstrumentID=%s ORDER BY Date ASC' % ID
             data = pd.read_sql_query(data_query, self.engine)
 
-            # training data size
-            training_size = 23
+            # n_days size
+            n_days_train = 50
 
-            for n in range((training_size - 1), len(data)):
+            for n in range((n_days_train - 1), len(data)):
                 insert_query = 'INSERT INTO dbo_AlgorithmForecast VALUES ({}, {}, {}, {}, {})'
 
                 # populate entire table if empty
                 # or add new dates based on information in Statistics table
                 if latest_date.empty or latest_date['ForecastDate'][0] <= data['Date'][n]:
                     #  lr forecast training method
-                    x_train = [i for i in range(training_size - 1)]
-                    y_train = data['Close'][n - (training_size - 1):n]
-                    x_test = [training_size - 1]
+                    x_train = [i for i in range(n_days_train - 1)]
+                    y_train = data['Close'][n - (n_days_train - 1):n]
+                    #print(y_train)
+                    x_test = [n_days_train - 1]
 
                     x_train = np.array(x_train)
                     y_train = np.array(y_train)
@@ -633,22 +644,24 @@ class DataForecast:
                     x_train = x_train.reshape(-1, 1)
                     x_test = x_test.reshape(-1, 1)
 
+                    # fit intercept to true makes he y intercept (dependent variable) to be determined by line of best fit
                     clf = LinearRegression(fit_intercept=True)
 
                     clf.fit(x_train, y_train)
                     forecastClose = clf.predict(x_test)[0]
                     predError = 100 * abs(forecastClose - data['Close'][n]) / data['Close'][n]
                     forecastDate = "'" + str(data['Date'][n]) + "'"
-
                     insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                     self.engine.execute(insert_query)
-            # training and test data set sizes
+
+
+            # next one month prediction down here
             # 23 days in a month, 8 days are weekends, 31 - 8 = 23
             n_days = 23
-            training_size = 50
+            n_days_train = 50 #training for last 50 records
 
-            x_train = [i for i in range(training_size)]
-            y_train = data['Close'][-training_size:]
+            x_train = [i for i in range(n_days_train)]
+            y_train = data['Close'][-n_days_train:]
             x_test = [i for i in range(n_days)]
 
             x_train = np.array(x_train)
@@ -663,12 +676,12 @@ class DataForecast:
 
             forecast = clf.predict(x_test)
 
+
             print("\t| CLOSING PRICE: ", np.round(forecast, 4), '|')
 
             forecast_dates_query = 'SELECT date from dbo_datedim WHERE date > {} AND weekend=0 AND isholiday=0 ' \
                                    'ORDER BY date ASC LIMIT {}'.format(forecastDate, n_days)
             future_dates = pd.read_sql_query(forecast_dates_query, self.engine)
-
             # insert prediction into database
             for n in range(0, n_days):
                 insert_query = 'INSERT INTO dbo_algorithmforecast VALUES ({}, {}, {}, {}, {})'
@@ -677,6 +690,7 @@ class DataForecast:
                 forecastDate = "'" + str(future_dates['date'][n]) + "'"
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
+
 
     def calculate_forecast(self):
         """
