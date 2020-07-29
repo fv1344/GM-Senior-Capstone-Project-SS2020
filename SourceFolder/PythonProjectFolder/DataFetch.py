@@ -58,7 +58,6 @@ class DataFetch:
 
             data = data.reset_index()      # no designated index - easier to work with mysql database
 
-
             # Yahoo! Finance columns to match column names in MySQL database.
             # Column names are kept same to avoid any ambiguity.
             # Column names are not case-sensitive.
