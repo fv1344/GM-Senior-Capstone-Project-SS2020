@@ -24,7 +24,6 @@ from sklearn.preprocessing import *
 import math
 import holidays
 
-
 # class declaration and definition
 class DataForecast:
     def __init__(self, engine, table_name):
@@ -346,8 +345,6 @@ class DataForecast:
             real_avg = close_and_date_data['close'].mean()
             real_mad = close_and_date_data['close'].mad()
             real_mad_percent = real_mad / real_avg
-
-
 
             if show_output:
                 print("\n***** REAL CONSTANT VALUES *****\n")
@@ -1030,7 +1027,6 @@ class DataForecast:
                                'forecastdate={}'.format(algoCode, ID, latest_date_str)
                 self.engine.execute(delete_query)
 
-
             # get raw price data from database
             data_query = 'SELECT date, close ' \
                          'FROM dbo_instrumentstatistics ' \
@@ -1424,7 +1420,6 @@ class DataForecast:
         # loop through each ticker symbol
         for ID in df['instrumentid']:
 
-
             # remove all future prediction dates
             remove_future_query = 'DELETE FROM dbo_algorithmforecast WHERE algorithmcode={} AND prederror=-1 AND ' \
                                   'instrumentid={}'.format(algoCode, ID)
@@ -1596,7 +1591,6 @@ class DataForecast:
             # Applies quotes to current date so it can be read as a string
             currentDate = ("'" + currentDate + "'")
 
-
             #This query will grab quarterly instrument prices from between 2014 and the current date to be used in the forecasting
             query = "SELECT close, instrumentid FROM ( SELECT date, close, instrumentID, ROW_NUMBER() OVER " \
                     "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
@@ -1625,7 +1619,6 @@ class DataForecast:
                 SP = SP.reset_index(drop=True)
                 macroPercentChange = macroPercentChange.reset_index(drop=True)
 
-
                 for i in range(0, n):
 
                     if (i == 0):
@@ -1634,7 +1627,6 @@ class DataForecast:
                     else:
                         macrov = (macro['statistics'][i]-macro['statistics'][i - 1])/macro['statistics'][i - 1]
                         macroPercentChange['statistics'].iloc[i] = macrov * 100
-
 
                 #Algorithm for forecast price
                 S = DataForecast.calc(self, macroPercentChange, SP, n) #Calculates the average GDP and S&P values for the given data points over n days and performs operations on GDP average
@@ -1727,7 +1719,6 @@ class DataForecast:
         for i in data1['instrumentid']:
             d = {i: []}
             result.update(d)
-
 
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
@@ -1849,8 +1840,6 @@ class DataForecast:
                     temp_result.append(stat)
                     temp_price = stat
 
-
-
             # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
             # Instrument ID is mapped to n forecast prices
             result[ikeys[x]].append(temp_result)
@@ -1870,13 +1859,11 @@ class DataForecast:
                                             'forecastprice', 'algorithmcode', 'prederror'])
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
 
-
     def MSF3(self):
         # If you want to use set weightings, set this true. Otherwise set it false
         # If you set it to true then the weightings can be altered for MSF3 in AccuracyTest.py on line 1064 in create_weightings_MSF3
         # Using set weightings will significantly speed up the run time of the application
         setWeightings = True
-
 
         # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
         query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
@@ -1913,7 +1900,6 @@ class DataForecast:
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
         weightings = SourceFolder.PythonProjectFolder.AccuracyTest.create_weightings_MSF3(self.engine, setWeightings)
-
 
         n = 8
 
@@ -2034,7 +2020,6 @@ class DataForecast:
                     temp_result.append(stat)
                     temp_price = stat
 
-
             # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
             # Instrument ID is mapped to n forecast prices
             result[ikeys[x]].append(temp_result)
@@ -2087,7 +2072,6 @@ class DataForecast:
         for i in data1['instrumentid']:
             d = {i: []}
             result.update(d)
-
 
         # Weightings are determined through a function written in accuracytest.py
         # The weightings returned are used in the calculation below
@@ -2209,8 +2193,6 @@ class DataForecast:
                     temp_result.append(stat)
                     temp_price = stat
 
-
-
             # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
             # Instrument ID is mapped to n forecast prices
             result[ikeys[x]].append(temp_result)
@@ -2231,7 +2213,6 @@ class DataForecast:
                                             'forecastprice', 'algorithmcode', 'prederror'])
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
 
-
     # Calculation function used in MSF1
     def calc(self, df1, df2, n):
         G = 0
@@ -2243,8 +2224,5 @@ class DataForecast:
         G = G / n
         G = G / 100
         return G
-
-
-
 
 # END CODE MODULE
