@@ -3,7 +3,6 @@ import sqlalchemy as sal   # library to handle SQL database related operations
 from pymysql import converters
 import numpy as np
 
-
 class DBEngine:
 
     def mysql_engine(self):
@@ -21,5 +20,3 @@ class DBEngine:
         return engine
 
 # END CODE MODULE
-
-
