@@ -1,7 +1,6 @@
 import pandas as pd
 from math import floor, fabs
 
-
 class TradingSimulator:
     def __init__(self, engine, table_name):
         """
