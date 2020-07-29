@@ -2,7 +2,6 @@ import pandas as pd
 from stockstats import StockDataFrame as Sdf
 import sqlalchemy as sal
 
-
 class EngineeredFeatures:
     def __init__(self, engine, table_name):
         """
