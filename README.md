@@ -1,6 +1,6 @@
 # README
 
-Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | June 29 2020
+Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | July 30 2020
 
 ## Prerequisite Programs:
 * IDE: [Jetbrains PyCharm](https://www.jetbrains.com/pycharm/download/#section=windows)
@@ -17,20 +17,19 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 	* Port: 3306  
 	* Username: root  
 	* Password: password  
-	* (or edit connection string in: -> gmfintech2019 -> FinsterTab -> F2019 -> dbEngine.py)
 
-3. Create schema named 'gmfsp_db' in MySQL Workbench
+3. Create schema named 'gmfsp_db'
 
 4. Copy SQL script from folder:  
-	* GM-Senior-Capstone-Project-SS2020 -> FinsterTab -> W2020 -> SQL -> SQL CREATE TABLE SCRIPTS MYSQL -> CREATE_DATABASE_TABLES_MYSQL.sql  
+	* GM-Senior-Capstone-Project-SS2020 -> SourceFolder -> SupplementalMaterial -> SQL -> SQL CREATE TABLE SCRIPTS MYSQL -> CREATE_DATABASE_TABLES_MYSQL.sql  
 	
-5. Run script in MySQL Workbench
+5. Execute script
 
-## Part 2: Python
+## Part 2: PyCharm
 
 1. Create a folder named 'gmfintech' at a convenient location on your machine. 
 
-2. Open Command Prompt and navigate to the directory of this 'gmfintech' folder.
+2. Open Command Prompt and navigate to the directory of this folder.
 	* An easy way to do this is:
 		1. Open File Explorer
 		2. Navigate to the location of the 'gmfintech' folder
@@ -42,7 +41,7 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 		8. Paste the address
 		9. Press enter
 
-3. Clone GitHub Repository in 'gmfintech' folder by executing the following command:  
+3. Clone GitHub Repository into 'gmfintech' folder by executing the following command:  
 	* git clone https://github.com/frinojais/GM-Senior-Capstone-Project-SS2020.git
 	* (The Command Prompt should look like this: 
 		C:\Users\Frino\Desktop\gmfintech>git clone https://github.com/frinojais/GM-Senior-Capstone-Project-SS2020.git [Press Enter])
@@ -66,7 +65,13 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 	* tensorflow		(PIP script: pip install tensorflow)
 	* holidays		(PIP script: pip install holidays)
 
-6. Run DataMain.py in PyCharm
+6. Open the project 'GM-Senior-Capstone-Project-SS2020'
+
+7. Open 'DataMain.py'
+
+8. Toggle all of the boolean variables at the top to True
+
+9. Run DataMain.py
 
 
 ## Part 3: Power BI
@@ -83,6 +88,4 @@ Frino Jais | William Aman | Sri Padmini Jayanti | Minhajul Abadeen  | CSC4996 | 
 
 6. Cancel the Navigator window
 
-7. Import the report template using the Import button in the File tab (GM-Senior-Capstone-Project-SS2020 -> FinsterTab -> W2020 -> Power BI -> GM_FinTech_Application.pbit)
-
-
+7. Import a report template using the Import button in the File tab (GM-Senior-Capstone-Project-SS2020 -> SourceFolder -> SupplementalMaterial -> Power BI -> 'x'.pbit)
