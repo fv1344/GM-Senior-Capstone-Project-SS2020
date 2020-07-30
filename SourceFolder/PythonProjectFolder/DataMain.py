@@ -30,7 +30,7 @@ instrument_master = 'dbo_instrumentmaster'
 reset_date_dim = False                  # (Takes around 1 minute)
 
 # Collect the source data
-update_close_stats = False
+update_close_stats = True
 update_macro_stats = False
 
 # Calculate engineered data from close prices
@@ -147,6 +147,7 @@ if update_remaining_forecasts:
     forecast.calculate_xgboost_forecast()
 
 # Generate Buy / Sell Signals
+# Rewrites the old signals every time it is ran. Look into a fix
 if update_signals:
     print("Generating Buy/Sell Signals...")
     # Get Raw Data and Technical Indicators
