@@ -696,7 +696,8 @@ class DataForecast:
         # The weights function is written separately in the AccuracyTest.py file
         #The accuracy percentages shown are calculated as a trend line accuracy, so as to depict the quarterly forecast made by the MSF_final algorithm
         #It also attempts to include the monthly moving average concept infused to try to improve the accuracy compared to MSF1
-
+        #Please check dbo_tempvisualize for output storage
+        #For proper output comparison, dbo_tempvisualize has been utilized
         setWeightings = True
 
         # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
