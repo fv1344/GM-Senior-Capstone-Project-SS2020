@@ -39,8 +39,8 @@ update_engineered_features = False
 # Forecast close prices
 update_msf_forecast = False             # (Takes around 3 minutes)
 update_ars_forecast = False
-update_fjf_forecast = False
-update_lr_forecast = False
+update_fjf_forecast = False             # (Takes around 5 minutes)
+update_lr_forecast = False              # (Takes around 2 minutes)
 update_remaining_forecasts = False      # (Takes around 1 hour)
 
 # Generate Buy/Sell signals
@@ -81,7 +81,7 @@ if update_macro_stats:
 # Generate MSF forecasts
 if update_msf_forecast:
     print("Generating MSF Forecasts...")
-    DataForecast.MSF_final(db_engine)
+    # DataForecast.MSF_final(db_engine)
     DataForecast.MSF1(db_engine)
     DataForecast.MSF2(db_engine)
     DataForecast.MSF3(db_engine)
@@ -108,7 +108,7 @@ if update_remaining_forecasts:
     # 1 year = 1.5 min runtime
     # Each run will take the same amount of time
     print("Polynomial Regression...")
-    forecast.calculate_regression("2019-07-15", 20, 5)
+    forecast.calculate_regression("2019-07-30", 20, 5)
 
     # calculate and store price predictions ("PricePred")
     # 10 years = 2 min runtime
@@ -132,7 +132,7 @@ if update_remaining_forecasts:
     # 1 year = 3.5min runtime
     # Coded to not overwrite whole table every time (i.e. each run after first will be quick)
     print("Random Forest...")
-    forecast.calculate_random_forest_forecast("2019-07-15")
+    forecast.calculate_random_forest_forecast("2019-07-30")
 
     # calculate and store SVM forecast
     # 10 years = 2.5 min runtime
@@ -178,7 +178,7 @@ if run_simulator:
 if update_ars_forecast:
     print("Calculating ARS...")
     my = DataForecast(db_engine, instrument_master)
-    my.calculate_ars_forecast('2020-06-17', '2020-07-17', 15, False, True, True, False)
+    my.calculate_ars_forecast('2020-07-30', '2020-08-30', 30, False, True, False, False)
 
 # Generate Frino Jais Function forecasts
 if update_fjf_forecast:
