@@ -691,7 +691,7 @@ class DataForecast:
                 insert_query = insert_query.format(forecastDate, ID, forecastClose, algoCode, predError)
                 self.engine.execute(insert_query)
 
-    def MSF_final(self):
+        def MSF_final(self):
         # This algorithm uses weightings strategy for the macro variables so, setWeightings needs to be True
         # The weights function is written separately in the AccuracyTest.py file
         #The accuracy percentages shown are calculated as a trend line accuracy, so as to depict the quarterly forecast made by the MSF_final algorithm
@@ -749,10 +749,9 @@ class DataForecast:
 
             # Weightings are determined through a function written in accuracytest.py
             # The weightings returned are used in the calculation below
-            #weightings = FinsterTab.W2020.AccuracyTest.create_weightings_MSF2(self.engine,setWeightings)
-            weightings = SourceFolder.PythonProjectFolder.AccuracyTest.create_weightings_MSF2(self.engine, setWeightings)
+            weightings = SourceFolder.PythonProjectFolder.AccuracyTest.create_weightings_MSFfinal(self.engine, setWeightings)
 
-        #Mering the concept of moving average into the macro-economic predictions, I have taken a monthly moving average of the 10 financial instruments.
+        #Merging the concept of moving average into the macro-economic predictions, I have taken a monthly moving average of the 10 financial instruments.
         # length variables for monthly moving average
         monthly_avg = 30
         #This is stored in the instrumentdata dictionary, later used for all the calsulations below.
@@ -816,7 +815,7 @@ class DataForecast:
         currentDate = str(datetime.today())
         currentDate = ("'" + currentDate + "'")
 
-        # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
+        # For loop through the macroeconomic codes to calculate the macro economic variable percent change
         for i in codemacro:
             # Check to make sure the macroeconcode we are working with is one of the relevant ones
             if i in variablepercent:
@@ -1016,7 +1015,7 @@ class DataForecast:
             # Calculate sum of percent error and find average
 
             xph_average_percent_error = sum(xph_absolute_percent_error) / 15
-            print("Average percent error of MSF2 on XPH stock is: ", xph_average_percent_error * 100, "%")
+            print("Average percent error of MSF_final on XPH stock is: ", xph_average_percent_error * 100, "%")
 
         if forecast_results_dataframe['instrumentid'][i] == 5:
             carz_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
@@ -1075,10 +1074,9 @@ class DataForecast:
         d = len(forecast_results_dataframe)
         b = (count / d) * 100
         # Prints the trend accuracy
-        # print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
+        print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
 
     # End of MSF_final accuracy tests
-
     def calculate_forecast(self):
         """
         Calculate historic one day returns based on traditional forecast model
