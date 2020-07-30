@@ -1927,17 +1927,18 @@ class DataForecast:
         table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('replace'),
                      index=False)
 
-    def MSF_final(self):
+        def MSF_final(self):
         # This algorithm uses weightings strategy for the macro variables so, setWeightings needs to be True
-        # The weights function is written separately below this algorithm
-        #Accuracy and error functions are separately written below this algorithm
+        # The weights function is written separately in the AccuracyTest.py file
+        #The accuracy percentages shown are calculated as a trend line accuracy, so as to depict the quarterly forecast made by the MSF_final algorithm
         #It also attempts to include the monthly moving average concept infused to try to improve the accuracy compared to MSF1
+        #Please check dbo_tempvisualize for output storage
+        #For proper output comparison, dbo_tempvisualize has been utilized
+        setWeightings = True
 
-        setWeightings = False
-        #Set to false now becuase of the weightings function not applying properly to all the instruments.
         # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
-        query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
-        data = pd.read_sql_query(query, self.engine)
+        macroquery = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
+        macrodata = pd.read_sql_query(macroquery, self.engine)
         #To see if the macro data is being pulled properly, uncomment the following line:
         #print(data)
 
@@ -1954,51 +1955,58 @@ class DataForecast:
         print('Ford: F')
         print('Honda Motor Company: HMC')
 
-        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
-        data1 = pd.read_sql_query(query, self.engine)
+        instrumentquery = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
+        instrumentdata = pd.read_sql_query(instrumentquery, self.engine)
         #To see of the data is being pulled properly, uncomment the following line:
         #print(data1)
 
-        # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
-        keys = {}
-        for i in range(len(data)):
-            keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
+        # Dictionary named codemacro to store the macro econ code for each macro econ name
+        codemacro = {}
+        for i in range(len(macrodata)):
+            codemacro.update({macrodata['macroeconname'].iloc[i]: macrodata['macroeconcode'].iloc[i]})
 
-        # ikeys is a dictionary that will be used to store instrument ids for each instrument name
-        ikeys = {}
-        for x in range(len(data1)):
-            ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
+        # Dictionary named idinstrument to store instrument ids for each instrument name
+        idinstrument = {}
+        for x in range(len(instrumentdata)):
+            idinstrument.update({instrumentdata['instrumentname'].iloc[x]: instrumentdata['instrumentid'].iloc[x]})
 
-        # Vars is a dictionary used to store the macro economic variable percent change for each macro economic code
-        vars = {}
-        for i in data['macroeconname']:
-            # Vars is only populated with the relevant macro economic variables (GDP, UR, IR, MI and COVI)
+        # Dictionary named variablepercent to store the macro economic variable percent change for each macro economic code
+        variablepercent = {}
+        for i in macrodata['macroeconname']:
+            # variablepercent being populated with the relevant macro economic variables which are: GDP, UR, IR, MI and COVI
             if(i == 'GDP' or i == 'Unemployment Rate' or i == 'Inflation Rate' or i == 'Misery Index' or i == 'Crude Oil ETF Volatility Index'):
                 d = {i: []}
-                vars.update(d)
+                variablepercent.update(d)
 
         # Result will hold the resulting forecast prices for each instrument ID
-        result = {}
-        for i in data1['instrumentid']:
+        forecastresult = {}
+        for i in instrumentdata['instrumentid']:
             d = {i: []}
-            result.update(d)
+            forecastresult.update(d)
 
+            # Weightings are determined through a function written in accuracytest.py
+            # The weightings returned are used in the calculation below
+            weightings = SourceFolder.PythonProjectFolder.AccuracyTest.create_weightings_MSFfinal(self.engine, setWeightings)
 
-        # Weightings are determined through a function written in accuracytest.py
-        # The weightings returned are used in the calculation below
-        weightings = FinsterTab.W2020.DataForecast.create_weightings_MSF_final(self.engine, setWeightings)
+        #Merging the concept of moving average into the macro-economic predictions, I have taken a monthly moving average of the 10 financial instruments.
+        # length variables for monthly moving average
+        monthly_avg = 30
+        #This is stored in the instrumentdata dictionary, later used for all the calsulations below.
+        instrumentdata['movingavg'] = instrumentdata['close'].rolling(monthly_avg).mean()
+        print("Moving average length = 30, infused in the calculation")
 
+        #Data points is defined as n here. It means the number of iterations that the below calculations will perform
+        print("MSF_final works with 15 datapoints")
         n = 15
 
-        # Getting Dates for Future Forecast #
-        # --------------------------------------------------------------------------------------------------------------#
         # Initialize the currentDate variable for use when grabbing the forecasted dates
         currentDate = datetime.today()
 
         # Creates a list to store future forecast dates
-        date = []
+        forecastdates = []
 
         # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
+        #This is done in a quarter basis
         if (currentDate.month < 4):
             count = 0
         elif (currentDate.month < 7 and currentDate.month >= 4):
@@ -2017,23 +2025,23 @@ class DataForecast:
             # If the count is 0 then we are still in the first quarter
             if (count == 0):
                 # Append the date list with corresponding quarter and year
-                date.append(str(year) + "-03-" + "31")
+                forecastdates.append(str(year) + "-03-" + "31")
                 # Increase count so this date is not repeated for this year
                 count += 1
 
             # Do the same for the next quarter
             elif (count == 1):
-                date.append(str(year) + "-06-" + "30")
+                forecastdates.append(str(year) + "-06-" + "30")
                 count += 1
 
             # And for the next quarter
             elif (count == 2):
-                date.append(str(year) + "-09-" + "30")
+                forecastdates.append(str(year) + "-09-" + "30")
                 count += 1
 
             # Until we account for the last quarter of the year
             else:
-                date.append(str(year) + "-12-" + "31")
+                forecastdates.append(str(year) + "-12-" + "31")
                 # Where we then reinitialize count to 0
                 count = 0
                 # And then increment the year for the next iterations
@@ -2044,54 +2052,53 @@ class DataForecast:
         currentDate = str(datetime.today())
         currentDate = ("'" + currentDate + "'")
 
-        # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
-        for i in keys:
+        # For loop through the macroeconomic codes to calculate the macro economic variable percent change
+        for i in codemacro:
             # Check to make sure the macroeconcode we are working with is one of the relevant ones
-            if i in vars:
-                # Query to grab the macroeconomic statistics from the database using the relevant macro economic codes
-                query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + keys[i] + '"')
-                data = pd.read_sql_query(query, self.engine)
+            if i in variablepercent:
+                # Query to grab the macroeconomic statistics from the database using the relevant macro economic codes - GDP, UR, IR, MI, COVI
+                macrostats = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + codemacro[i] + '"')
+                macrostatsdata = pd.read_sql_query(macrostats, self.engine)
 
                 # For loop to retrieve macro statistics and calculate percent change
                 for j in range(n):
                     # This will grab the n+1 statistic to use to calculate the percent change to the n statistic
-                    temp = data.tail(n + 1)
+                    temp = macrostatsdata.tail(n + 1)
                     # This will grab the most recent n statistics from the query, as we are working only with n points
-                    data = data.tail(n)
+                    macrostatsdata = macrostatsdata.tail(n)
 
                     # For the first iteration we need to use the n+1th statistic to calculate percent change on the oldest point
                     if j == 0:
-                        macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
-                        vars[i].append(macrov)
+                        macrov = (macrostatsdata['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
+                        variablepercent[i].append(macrov)
                     else:
-                        macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
-                                 data['statistics'].iloc[j - 1]
-                        vars[i].append(macrov)
+                        macrov = (macrostatsdata['statistics'].iloc[j] - macrostatsdata['statistics'].iloc[j - 1]) / macrostatsdata['statistics'].iloc[j - 1]
+                        variablepercent[i].append(macrov)
 
                 #To show the (n+1) statistics data collected by temp variable, uncomment the following line:
                 #print(temp)
 
-                #To show the most recent n statistics data grabbed by data variable, uncomment the following line:
-                #print(data)
+                #To show the most recent n statistics data grabbed by macrostatsdata variable, uncomment the following line:
+                #print(macrostatsdata)
         # We now iterate through the instrument ids
-        for x in ikeys:
+        for x in idinstrument:
 
             # This query will grab the quarterly instrument statistics from 2012 to now
-            query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
+            quarterstats = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
                     "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
                     "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2012-01-01' AND {} ) z " \
                     "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
-                    "MONTH(z.date) = 12)".format(ikeys[x], currentDate)
+                    "MONTH(z.date) = 12)".format(idinstrument[x], currentDate)
 
             # Then we execute the query and store the returned values in instrumentStats, and grab the latest n stats from the dataframe as we are only using n datapoints
-            instrumentStats = pd.read_sql_query(query, self.engine)
+            instrumentStats = pd.read_sql_query(quarterstats, self.engine)
             instrumentStats = instrumentStats.tail(n)
 
             #To verify the pulled information, uncomment the following line:
             #print(instrumentStats)
 
-            # Temp result will then store the resulting forecast prices throughout the calculation of n datapoints
-            temp_result = []
+            # Temp result will then store the resulting forecast prices throughout the calculation of n =15 datapoints
+            priceforecast = []
 
             # isFirst will determine whether or not this is the first calculation being done
             # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
@@ -2100,42 +2107,41 @@ class DataForecast:
             # This for loop is where the actual calculation takes place
             for i in range(n):
                 if isFirst:
-                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] * weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
-                    stat = (stat * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
-                    temp_result.append(stat)
-                    temp_price = stat
+                    calculate_pred = variablepercent['GDP'][i] * weightings[idinstrument[x]][0] - (variablepercent['Unemployment Rate'][i] * weightings[idinstrument[x]][1] + variablepercent['Inflation Rate'][i] * weightings[idinstrument[x]][2]) - (variablepercent['Misery Index'][i] * variablepercent['Misery Index'][i] + (variablepercent['COVI']))
+                    calculate_pred = (calculate_pred * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
+                    priceforecast.append(calculate_pred)
+                    priceforecast = calculate_pred
                     isFirst = False
                 else:
-                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] *
-                                weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
-                    stat = (stat * temp_price) + temp_price
-                    temp_result.append(stat)
-                    temp_price = stat
+                    calculate_pred = variablepercent['GDP'][i] * weightings[idinstrument[x]][0] - (variablepercent['Unemployment Rate'][i] * weightings[idinstrument[x]][1] + variablepercent['Inflation Rate'][i] *
+                                weightings[idinstrument[x]][2]) - (variablepercent['Misery Index'][i] * variablepercent['Misery Index'][i] + (variablepercent['COVI']))
+                    calculate_pred = (calculate_pred * priceforecast) + priceforecast
+                    priceforecast.append(calculate_pred)
+                    priceforecast = calculate_pred
 
             # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
             # Instrument ID is mapped to n forecast prices
-            result[ikeys[x]].append(temp_result)
+            forecastresult[idinstrument[x]].append(priceforecast)
 
         #Table will represent a temporary table with the data appended matching the columns of the macroeconalgorithmforecast database table
-        table = []
+        temptable = []
         #This forloop will populate table[] with the correct values according to the database structure
-        for i, k in result.items():
-            cnt = 0
+        for i, k in forecastresult.items():
+            iter = 0
             for j in k:
                 for l in range(n):
-                    table.append([date[cnt], i, 'ALL', j[cnt], 'MSF_final', 0])
-                    cnt += 1
+                    temptable.append([forecastdates[iter], i, 'ALL', j[iter], 'MSF_final', 0])
+                    iter += 1
 
         #Once table is populated we then push it into the macroeconalgorithmforecast table
-        table = pd.DataFrame(table, columns=['forecastdate','instrumentid' , 'macroeconcode',
+        temptable = pd.DataFrame(temptable, columns=['forecastdate','instrumentid' , 'macroeconcode',
                                             'forecastprice', 'algorithmcode', 'prederror'])
-        table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
+        temptable.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
 
         #After the above loop is completed, the macroeconalgorithmforecast table will be populated with quarterly forecast made by MSF_final algorithm code
 
-    def MSF_final_accuracy(self):
-        n = 15
-    #Used previous semester's accuracy function to fit the style of how the MSF_final function is written
+        #Accuracy and price error calculations begin here
+        #For accuracy calculations:
         # Gets the macro economic variables codes and names to loop through the inidividual macro variables
         query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
         data = pd.read_sql_query(query, self.engine)
@@ -2184,610 +2190,130 @@ class DataForecast:
             dates = []
             for l in check_data['date']:
                 dates.append(str(l))
+        # Creates and inserts the forecast dates, instrument ids, calculated forecast prices, and actual close prices into an array
+        forecast_results_array = []
+        for k in range(n):
+                forecast_results_array.append([dates[k], i, priceforecast[k], check_data['close'].loc[k]]) #improtant for the upcoming accuracy calculations
 
-            # Loops through the macro economic variable codes to calculate percent change
-            for j in macrocodes:
-                # Retrieves macro economic statistics for each macro variables
-                query = "SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {} AND date <= {}".format(
-                    '"' + j + '"', start_date)
-                data = pd.read_sql_query(query, self.engine)
+        # Creates a dataframe out of the array created above
+        forecast_results_dataframe = pd.DataFrame(forecast_results_array, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'close'])
+        #print(forecast_results_dataframe)
 
-                # For loop to retrieve macro statistics and calculate percent change
-                for k in range(n):
-                    temp = data.tail(n + 1)
-                    data = data.tail(n)
-                    if j == k:
-                        macrov = (data['statistics'].iloc[k] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
-                        indicators[j].append(macrov)
-                    else:
-                        macrov = (data['statistics'].iloc[k] - data['statistics'].iloc[k - 1]) / \
-                                 data['statistics'].iloc[
-                                     k - 1]
-                        indicators[j].append(macrov)
-
-            # Preforms the actual calculations and stores them in an array called calculated forecast
-            calculated_forecast = []
-            for k in range(n):
-                stat = indicators['GDP'][k] * 1 - (
-                            indicators['UR'][k] * 0 + indicators['IR'][k] * .5 + indicators['COVI'][k] * .5) - (
-                               indicators['MI'][k] * indicators['MI'][k])
-                stat = (stat * train_data['close'].iloc[n - 1]) + train_data['close'].iloc[n - 1]
-                calculated_forecast.append(stat)
-
-            #To see the calculated forecasts array at this point, uncomment the following line:
-            #print(calculated_forecast)
-
-            # Creates and inserts the forecast dates, instrument ids, calculated forecast prices, and actual close prices into an array
-            results = []
-            for k in range(n):
-                results.append([dates[k], i, calculated_forecast[k], check_data['close'].loc[k]])
-
-            # Creates a dataframe out of the array created above
-            df = pd.DataFrame(results, columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'close'])
-            # print(df)
-
-            count = 0
-            # Calculates accuracy
-            percent_error = []
-            temp_error = 0
-            for x in range((len(df) - 1)):  # Check if upward or downward trend
-                if (df['close'][x + 1] > df['close'][x] and df['forecastcloseprice'][x + 1] > df['forecastcloseprice'][
-                    x]) or \
-                        (df['close'][x + 1] < df['close'][x] and df['forecastcloseprice'][x + 1] <
-                         df['forecastcloseprice'][x]):
-                    count += 1
-                temp_error = abs((df['close'][x] - df['forecastcloseprice'][x])) / df['close']
+        count = 0
+        # Calculates accuracy
+        #A trend line accuracy calculation method has been implemented, to accomodate quarterly calculations. Error percentages and accuracies might be different
+        #from other statistical algorithms due to this reason
+        percent_error = []
+        temp_error = 0
+        for x in range((len(forecast_results_dataframe) - 1)):
+            # Check if upward or downward trend - basically what was explained about the trend accuracy method
+            if (forecast_results_dataframe['close'][x + 1] > forecast_results_dataframe['close'][x] and forecast_results_dataframe['forecastcloseprice'][x + 1] > forecast_results_dataframe['forecastcloseprice'][x]) or (forecast_results_dataframe['close'][x + 1] < forecast_results_dataframe['close'][x] and forecast_results_dataframe['forecastcloseprice'][x + 1] < forecast_results_dataframe['forecastcloseprice'][x]):
+                count += 1
+                temp_error = abs((forecast_results_dataframe['close'][x] - forecast_results_dataframe['forecastcloseprice'][x])) / forecast_results_dataframe['close']
 
             # Percent Error calculation
+            #Done for each instrument separately
+            #Usage of absolute percent error, then taken average for average absolute percent error
+        temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+        absolute_percent_error = [abs(ele) for ele in temp_error]
+        percent_error.append(absolute_percent_error)
 
-            temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-            absolute_percent_error = [abs(ele) for ele in temp_error]
-            percent_error.append(absolute_percent_error)
+        if forecast_results_dataframe['instrumentid'][i] == 1:
+            gm_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            gm_absolute_percent_error = [abs(ele) for ele in gm_temp_error]
 
-            if df['instrumentid'][i] == 1:
-                gm_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                gm_absolute_percent_error = [abs(ele) for ele in gm_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            gm_average_percent_error = sum(gm_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on GM stock is: ", gm_average_percent_error * 100, "%")
 
-                gm_average_percent_error = sum(gm_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on GM stock is: ", gm_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 2:
+            pfe_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            pfe_absolute_percent_error = [abs(ele) for ele in pfe_temp_error]
 
-            if df['instrumentid'][i] == 2:
-                pfe_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                pfe_absolute_percent_error = [abs(ele) for ele in pfe_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            pfe_average_percent_error = sum(pfe_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on PFE stock is: ", pfe_average_percent_error * 100, "%")
 
-                pfe_average_percent_error = sum(pfe_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on PFE stock is: ", pfe_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 3:
+            spy_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            spy_absolute_percent_error = [abs(ele) for ele in spy_temp_error]
 
-            if df['instrumentid'][i] == 3:
-                spy_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                spy_absolute_percent_error = [abs(ele) for ele in spy_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            spy_average_percent_error = sum(spy_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on S&P 500 stock is: ", spy_average_percent_error * 100, "%")
 
-                spy_average_percent_error = sum(spy_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on S&P 500 stock is: ", spy_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 4:
+            xph_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            xph_absolute_percent_error = [abs(ele) for ele in xph_temp_error]
 
-            if df['instrumentid'][i] == 4:
-                xph_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                xph_absolute_percent_error = [abs(ele) for ele in xph_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            xph_average_percent_error = sum(xph_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on XPH stock is: ", xph_average_percent_error * 100, "%")
 
-                xph_average_percent_error = sum(xph_absolute_percent_error) / 12
-                print("Average percent error of MSF2 on XPH stock is: ", xph_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 5:
+            carz_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            carz_absolute_percent_error = [abs(ele) for ele in carz_temp_error]
 
-            if df['instrumentid'][i] == 5:
-                carz_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                carz_absolute_percent_error = [abs(ele) for ele in carz_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            carz_average_percent_error = sum(carz_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on CARZ index stock is: ", carz_average_percent_error * 100, "%")
 
-                carz_average_percent_error = sum(carz_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on CARZ index stock is: ", carz_average_percent_error * 100,
-                      "%")
+        if forecast_results_dataframe['instrumentid'][i] == 6:
+            tyx_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            tyx_absolute_percent_error = [abs(ele) for ele in tyx_temp_error]
 
-            if df['instrumentid'][i] == 6:
-                tyx_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                tyx_absolute_percent_error = [abs(ele) for ele in tyx_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            tyx_average_percent_error = sum(tyx_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on TYX 30-YR bond is: ", tyx_average_percent_error * 100, "%")
 
-                tyx_average_percent_error = sum(tyx_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on TYX 30-YR bond is: ", tyx_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 7:
+            fcau_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            fcau_absolute_percent_error = [abs(ele) for ele in fcau_temp_error]
 
-            if df['instrumentid'][i] == 7:
-                fcau_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                fcau_absolute_percent_error = [abs(ele) for ele in fcau_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            fcau_average_percent_error = sum(fcau_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on FCAU bond is: ", fcau_average_percent_error * 100, "%")
 
-                fcau_average_percent_error = sum(fcau_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on FCAU bond is: ", fcau_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 8:
+            tm_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            tm_absolute_percent_error = [abs(ele) for ele in tm_temp_error]
 
-            if df['instrumentid'][i] == 8:
-                tm_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                tm_absolute_percent_error = [abs(ele) for ele in tm_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            tm_average_percent_error = sum(tm_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on Toyota Motors: ", tm_average_percent_error * 100, "%")
 
-                tm_average_percent_error = sum(tm_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on Toyota Motors: ", tm_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 9:
+            ford_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            ford_absolute_percent_error = [abs(ele) for ele in ford_temp_error]
 
-            if df['instrumentid'][i] == 9:
-                ford_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                ford_absolute_percent_error = [abs(ele) for ele in ford_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            ford_average_percent_error = sum(ford_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on Ford stock: ", ford_average_percent_error * 100, "%")
 
-                ford_average_percent_error = sum(ford_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on Ford stock: ", ford_average_percent_error * 100, "%")
+        if forecast_results_dataframe['instrumentid'][i] == 10:
+            hmc_temp_error = (forecast_results_dataframe['close'] - forecast_results_dataframe['forecastcloseprice']) / forecast_results_dataframe['close']
+            hmc_absolute_percent_error = [abs(ele) for ele in hmc_temp_error]
 
-            if df['instrumentid'][i] == 10:
-                hmc_temp_error = (df['close'] - df['forecastcloseprice']) / df['close']
-                hmc_absolute_percent_error = [abs(ele) for ele in hmc_temp_error]
+            # Calculate sum of percent error and find average
 
-                # Calculate sum of percent error and find average
+            hmc_average_percent_error = sum(hmc_absolute_percent_error) / 15
+            print("Average percent error of MSF_final on HMC: ", hmc_average_percent_error * 100, "%")
 
-                hmc_average_percent_error = sum(hmc_absolute_percent_error) / 12
-                print("Average percent error of MSF_final on HMC: ", hmc_average_percent_error * 100, "%")
+        d = len(forecast_results_dataframe)
+        b = (count / d) * 100
+        # Prints the trend accuracy
+        print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
 
-            d = len(df)
-            b = (count / d) * 100
-            # Prints the trend accuracy
-            # print('The accuracy for instrument %d: %.2f%%\n' % (i, b))
-
-    # End of MSF_final accuracy tests
-
-    # Create weightings for MSF_final algorithm for past dates and compares them to actual instrument prices, generating a percent error calculation
-    # We then iterate through several different weightings and we compare each percent error for each instrument and determine the weightings with the lowest percent error
-    def create_weightings_MSF_final(self, setWeightings):
-
-        # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
-        query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
-        data = pd.read_sql_query(query, self.engine)
-
-        # Query to grab the instrumentid and instrument name from the instrumentmaster database table
-        # New instruments added SS2020 so, total instruments are 10 now
-        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
-        data1 = pd.read_sql_query(query, self.engine)
-
-        # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
-        keys = {}
-        for i in range(len(data)):
-            keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
-
-        # ikeys is a dictionary that will be used to store instrument ids for each instrument name
-        ikeys = {}
-        for x in range(len(data1)):
-            ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
-
-        # Vars is a dictionary used to store the macro economic variable percent change for each macro economic code
-        vars = {}
-        # Vars is only populated with the relevant macro economic variables (GDP, COVI, UR, IR, MI)
-        for i in data['macroeconcode']:
-            if (i == 'GDP' or i == 'UR' or i == 'IR' or i == 'MI' or i == 'COVI'):
-                d = {i: []}
-                vars.update(d)
-
-        # Weightings is used to store the best weightings for each instrument id which is returned to dataforecast and used for actual prediction
-        weightings = {}
-
-        # n represents the number of datapoints we are working with (represented in quarters)
-        n = 15
-
-        # These are the date ranges we are working with
-        # start_date represents the starting date for the forecasts and the end of the training dates
-        start_date = "'2018-01-01'"
-        # end_date represents the date for which the forecasting ends
-        end_date = "'2020-01-01'"
-        # train_date represents the date we start collecting the instrument statistics used to forecast prices
-        train_date = "'2015-01-01'"
-
-        # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
-        for i in keys:
-            # Check to make sure the macroeconcode we are working with is one of the relevant ones
-            if keys[i] in vars:
-                # Query to grab the macroeconomic statistics from the database using the relevant macro economic codes
-                query = "SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {} AND date <= {}".format(
-                    '"' + keys[i] + '"', start_date)
-                data = pd.read_sql_query(query, self.engine)
-
-                # For loop to retrieve macro statistics and calculate percent change
-                for j in range(n):
-                    # This will grab the n+1 statistic to use to calculate the percent change to the n statistic
-                    temp = data.tail(n + 1)
-                    # This will grab the most recent n statistics from the query, as we are working only with n points
-                    data = data.tail(n)
-
-                    # For the first iteration we need to use the n+1th statistic to calculate percent change on the oldest point
-                    if j == 0:
-                        macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
-                        vars[keys[i]].append(macrov)
-                    else:
-                        macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
-                                 data['statistics'].iloc[j - 1]
-                        vars[keys[i]].append(macrov)
-
-        # If you are not using set weightings then this if statement will run and create the best fit weightings
-        if not setWeightings:
-            # We now iterate through the instrument ids
-            for x in ikeys:
-
-                # This query will grab the quarterly instrument statistics from 2016 to 2018
-                query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
-                        "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                        "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN {} AND {} ) z " \
-                        "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
-                        "MONTH(z.date) = 12)".format(ikeys[x], train_date, start_date)
-
-                # Then we execute the query and store the returned values in instrumentStats, and grab the last n stats from the dataframe as we are only using n datapoints
-                instrumentStats = pd.read_sql_query(query, self.engine)
-                instrumentStats = instrumentStats.tail(n)
-
-                # Best weightings will be used to store the best weightings for each instrument
-                best_weightings = [0, 0, 0]
-
-                # Best avg error will be used to store the best average percent error for each isntrument
-                best_avg_error = -1
-
-                # Best trend error will be used to store the best trend error for each instrument
-                best_trend_error = -1
-
-                # Best forecast prices will be used to store the forecast prices for the best weightings to store them in a database for visual comparison later
-                best_forecast_prices = []
-
-                # We now iterate through all 3 different possible weightings
-                for weight in numpy.arange(-5.7, 2.8, .25):
-                    for uweight in numpy.arange(-3.7, 3.6, .25):
-                        for iweight in numpy.arange(-.8, .9, .25):
-
-                            # We intialize a list to store the resulting forecasted prices to compare in another function
-                            stat_check = []
-
-                            # isFirst will determine whether or not this is the first calculation being done
-                            # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
-                            # IF it is false then we use the previous forecast price to predict the next forecast price
-                            isFirst = True
-
-                            # This is the actual calculation of MSF3 where we store the result in stat_check to compare to actual instrument prices
-                            for i in range(n):
-                                if isFirst:
-                                    # Change to pluses and test accuracy
-                                    stat = vars['GDP'][i] * weight - vars['UR'][i] * uweight + vars['IR'][
-                                        i] * iweight - (
-                                                   vars['MI'][i] * vars['MI'][i])
-                                    stat = (stat * instrumentStats['close'].iloc[n - 1]) + \
-                                           instrumentStats['close'].iloc[n - 1]
-                                    stat_check.append(stat)
-                                    temp_price = stat
-                                    isFirst = False
-                                else:
-                                    stat = vars['GDP'][i] * weight - (
-                                                vars['UR'][i] * uweight + vars['IR'][i] * iweight) - (
-                                                   vars['MI'][i] * vars['MI'][i])
-                                    stat = (stat * temp_price) + temp_price
-                                    stat_check.append(stat)
-                                    temp_price = stat
-
-                            # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
-                            # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
-                            temp_avg_error, temp_trend_error, dates = FinsterTab.weight_check(DBEngine().mysql_engine(),
-                                                                                              stat_check, ikeys[x], n, 'MSF_final',
-                                                                                              start_date, end_date)
-
-                            # Check to see if the best_avg_error has been initialized to a valid average percent error, if not then no average error or trend error has been calculated yet
-                            if (best_avg_error < 0):
-                                # If so store the average percent error, the best weightings, best trend error, and the resulting forecasted prices for comparison with other weightings
-                                best_avg_error = temp_avg_error
-                                best_weightings = [weight, uweight, iweight]
-                                best_trend_error = temp_trend_error
-                                best_forecast_prices = stat_check
-
-                            # Otherwise check if the newly calculated average percent error is worse than the newly calculated one
-                            elif (best_avg_error > temp_avg_error):
-                                # And if so set the values for all the relevant variables
-                                best_avg_error = temp_avg_error
-                                best_weightings = [weight, uweight, iweight]
-                                best_trend_error = temp_trend_error
-                                best_forecast_prices = stat_check
-
-                # Print statements to view the average percent error, trend error, and best weightings
-                print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error * 100, ikeys[x]),
-                      ' for function: MSF2')
-                print("The weightings are: ", best_weightings, ' for function: MSF_final')
-                print('The trend accuracy is: ', best_trend_error)
-
-                # initializes weightings dictionary as the best weightings found for each instrument id
-                weightings[ikeys[x]] = best_weightings
-
-                # visual_comparisons will be used to store the past forecasted prices so we can visualize them compared to actual instrument prices on a graph
-                visual_comparisons = []
-                for k in range(n):
-                    visual_comparisons.append([dates[k], ikeys[x], best_forecast_prices[k], 'MSF_final'])
-                df1 = pd.DataFrame(visual_comparisons,
-                                   columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
-                df1.to_sql('dbo_tempvisualize', self.engine,
-                           if_exists=('append'), index=False)
-
-            # The weightings for each instrument ID are returned to MSF_final algorithm above and used for prediction
-            return weightings
-
-        # This else statement will make use of the preset weightings for prediction and comparison
-        else:
-            # These are the set weightings as of 7/28/2020, based on the added new instruments as well.
-            weightings = {1: [-2.2, 3.3, 0.44999999999999996],
-                          2: [1.0499999999999998, -3.2, -0.8],
-                          3: [2.55, 3.3, 0.7],
-                          4: [0.04999999999999982, 3.05, 0.7],
-                          5: [-4.7, 3.3, 0.44999999999999996],
-                          6: [-1.2000000000000002, -3.7, -0.8],
-                          7: [2.55, 3.3, 0.7],
-                          8: [0.04999999999999982, 3.05, 0.7],
-                          9: [-4.7, 3.3, 0.44999999999999996],
-                          10: [-1.2000000000000002, -3.7, -0.8]
-                          }
-
-            # We now iterate through the instrument ids
-            for x in ikeys:
-
-                # This query will grab the quarterly instrument statistics from 2016 to 2018
-                query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
-                        "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                        "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN {} AND {} ) z " \
-                        "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
-                        "MONTH(z.date) = 12)".format(ikeys[x], train_date, start_date)
-
-                # Then we execute the query and store the returned values in instrumentStats, and grab the last n stats from the dataframe as we are only using n datapoints
-                instrumentStats = pd.read_sql_query(query, self.engine)
-                instrumentStats = instrumentStats.tail(n)
-
-                # Best weightings will be used to store the best weightings for each instrument
-                best_weightings = weightings[ikeys[x]]
-
-                # avg error will be used to store the best average percent error for each isntrument
-                avg_error = 0
-
-                # trend error will be used to store the best trend error for each instrument
-                trend_error = 0
-
-                # Best forecast prices will be used to store the forecast prices for the best weightings to store them in a database for visual comparison later
-                best_forecast_prices = []
-
-                # We intialize a list to store the resulting forecasted prices to compare in another function
-                stat_check = []
-
-                # isFirst will determine whether or not this is the first calculation being done
-                # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
-                # IF it is false then we use the previous forecast price to predict the next forecast price
-                isFirst = True
-
-                # This is the actual calculation of MSF3 where we store the result in stat_check to compare to actual instrument prices
-                for i in range(n):
-                    if isFirst:
-                        # Change to pluses and test accuracy
-                        stat = vars['GDP'][i] * best_weightings[0] - vars['UR'][i] * best_weightings[1] + vars['IR'][
-                            i] * best_weightings[2] - (
-                                       vars['MI'][i] * vars['MI'][i])
-                        stat = (stat * instrumentStats['close'].iloc[n - 1]) + instrumentStats['close'].iloc[
-                            n - 1]
-                        stat_check.append(stat)
-                        temp_price = stat
-                        isFirst = False
-                    else:
-                        stat = vars['GDP'][i] * best_weightings[0] - (
-                                    vars['UR'][i] * best_weightings[1] + vars['IR'][i] * best_weightings[2]) - (
-                                       vars['MI'][i] * vars['MI'][i])
-                        stat = (stat * temp_price) + temp_price
-                        stat_check.append(stat)
-                        temp_price = stat
-
-                # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
-                # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
-                avg_error, trend_error, dates = FinsterTab.weight_check(DBEngine().mysql_engine(), stat_check,
-                                                                        ikeys[x], n, 'MSF_final', start_date,
-                                                                        end_date)
-
-                # Print statements to view the average percent error, trend error, and best weightings
-                print("The lowest avg percent error is %.7f%% for instrumentID %d" % (avg_error * 100, ikeys[x]),
-                      ' for function: MSF_final')
-                print("The weightings are: ", best_weightings, ' for function: MSF_final')
-                print('The trend accuracy is: ', trend_error)
-
-                # visual_comparisons will be used to store the past forecasted prices so we can visualize them compared to actual instrument prices on a graph
-                visual_comparisons = []
-                for k in range(n):
-                    visual_comparisons.append([dates[k], ikeys[x], stat_check[k], 'MSF_final'])
-                df1 = pd.DataFrame(visual_comparisons,
-                                   columns=['forecastdate', 'instrumentid', 'forecastcloseprice', 'algorithmcode'])
-                df1.to_sql('dbo_tempvisualize', self.engine,
-                           if_exists=('append'), index=False)
-
-            # The weightings for each instrument ID are returned to dataforecast and used for prediction
-            return weightings
-
-    def MSF2(self):
-        # If you want to use set weightings, set this true. Otherwise set it false
-        # If you set it to true then the weightings can be altered for MSF2 in AccuracyTest.py on line 647 in create_weightings_MSF2
-        # Using set weightings will significantly speed up the run time of the application
-        setWeightings = True
-
-        # Query to grab the macroeconcodes and macroeconnames from the macroeconmaster database table
-        query = "SELECT macroeconcode, macroeconname FROM dbo_macroeconmaster WHERE activecode = 'A'"
-        data = pd.read_sql_query(query, self.engine)
-
-        # Query to grab the instrumentid and instrument name from the instrumentmaster database table
-        query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster limit 6'
-        data1 = pd.read_sql_query(query, self.engine)
-
-        # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
-        keys = {}
-        for i in range(len(data)):
-            keys.update({data['macroeconname'].iloc[i]: data['macroeconcode'].iloc[i]})
-
-        # ikeys is a dictionary that will be used to store instrument ids for each instrument name
-        ikeys = {}
-        for x in range(len(data1)):
-            ikeys.update({data1['instrumentname'].iloc[x]: data1['instrumentid'].iloc[x]})
-
-        # Vars is a dictionary used to store the macro economic variable percent change for each macro economic code
-        vars = {}
-        for i in data['macroeconname']:
-            # Vars is only populated with the relevant macro economic variables (GDP, UR, IR, and MI)
-            if(i == 'GDP' or i == 'Unemployment Rate' or i == 'Inflation Rate' or i == 'Misery Index'):
-                d = {i: []}
-                vars.update(d)
-
-        # Result will hold the resulting forecast prices for each instrument ID
-        result = {}
-        for i in data1['instrumentid']:
-            d = {i: []}
-            result.update(d)
-
-
-        # Weightings are determined through a function written in accuracytest.py
-        # The weightings returned are used in the calculation below
-        weightings = FinsterTab.W2020.AccuracyTest.create_weightings_MSF2(self.engine, setWeightings)
-
-        n = 8
-
-        # Getting Dates for Future Forecast #
-        # --------------------------------------------------------------------------------------------------------------#
-        # Initialize the currentDate variable for use when grabbing the forecasted dates
-        currentDate = datetime.today()
-
-        # Creates a list to store future forecast dates
-        date = []
-
-        # This will set the value of count according to which month we are in, this is to avoid having past forecast dates in the list
-        if (currentDate.month < 4):
-            count = 0
-        elif (currentDate.month < 7 and currentDate.month >= 4):
-            count = 1
-        elif (currentDate.month < 10 and currentDate.month >= 7):
-            count = 2
-        else:
-            count = 3
-
-        # Initialize a variable to the current year
-        year = currentDate.year
-
-        # Setup a for loop to loop through and append the date list with the date of the start of the next quarter
-        # For loop will run n times, corresponding to amount of data points we are working with
-        for i in range(n):
-            # If the count is 0 then we are still in the first quarter
-            if (count == 0):
-                # Append the date list with corresponding quarter and year
-                date.append(str(year) + "-03-" + "31")
-                # Increase count so this date is not repeated for this year
-                count += 1
-
-            # Do the same for the next quarter
-            elif (count == 1):
-                date.append(str(year) + "-06-" + "30")
-                count += 1
-
-            # And for the next quarter
-            elif (count == 2):
-                date.append(str(year) + "-09-" + "30")
-                count += 1
-
-            # Until we account for the last quarter of the year
-            else:
-                date.append(str(year) + "-12-" + "31")
-                # Where we then reinitialize count to 0
-                count = 0
-                # And then incrament the year for the next iterations
-                year = year + 1
-        # --------------------------------------------------------------------------------------------------------------#
-
-        # reinitializes currentDate to todays date, also typecasts it to a string so it can be read by MySQL
-        currentDate = str(datetime.today())
-        currentDate = ("'" + currentDate + "'")
-
-        # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
-        for i in keys:
-            # Check to make sure the macroeconcode we are working with is one of the relevant ones
-            if i in vars:
-                # Query to grab the macroeconomic statistics from the database using the relevant macro economic codes
-                query = 'SELECT date, statistics, macroeconcode FROM dbo_macroeconstatistics WHERE macroeconcode = {}'.format('"' + keys[i] + '"')
-                data = pd.read_sql_query(query, self.engine)
-
-                # For loop to retrieve macro statistics and calculate percent change
-                for j in range(n):
-                    # This will grab the n+1 statistic to use to calculate the percent change to the n statistic
-                    temp = data.tail(n + 1)
-                    # This will grab the most recent n statistics from the query, as we are working only with n points
-                    data = data.tail(n)
-
-                    # For the first iteration we need to use the n+1th statistic to calculate percent change on the oldest point
-                    if j == 0:
-                        macrov = (data['statistics'].iloc[j] - temp['statistics'].iloc[0]) / temp['statistics'].iloc[0]
-                        vars[i].append(macrov)
-                    else:
-                        macrov = (data['statistics'].iloc[j] - data['statistics'].iloc[j - 1]) / \
-                                 data['statistics'].iloc[j - 1]
-                        vars[i].append(macrov)
-
-        # We now iterate through the instrument ids
-        for x in ikeys:
-
-            # This query will grab the quarterly instrument statistics from 2014 to now
-            query = "SELECT date, close, instrumentid FROM ( SELECT date, close, instrumentid, ROW_NUMBER() OVER " \
-                    "(PARTITION BY YEAR(date), MONTH(date) ORDER BY DAY(date) DESC) AS rowNum FROM " \
-                    "dbo_instrumentstatistics WHERE instrumentid = {} AND date BETWEEN '2014-03-21' AND {} ) z " \
-                    "WHERE rowNum = 1 AND ( MONTH(z.date) = 3 OR MONTH(z.date) = 6 OR MONTH(z.date) = 9 OR " \
-                    "MONTH(z.date) = 12)".format(ikeys[x], currentDate)
-
-            # Then we execute the query and store the returned values in instrumentStats, and grab the last n stats from the dataframe as we are only using n datapoints
-            instrumentStats = pd.read_sql_query(query, self.engine)
-            instrumentStats = instrumentStats.tail(n)
-
-            # Temp result will then store the resulting forecast prices throughout the calculation of n datapoints
-            temp_result = []
-
-            # isFirst will determine whether or not this is the first calculation being done
-            # If it is true then we use the most recent instrument statistic to forecast the first pricepoint
-            # IF it is false then we use the previous forecast price to predict the next forecast price
-            isFirst = True
-            # This for loop is where the actual calculation takes place
-            for i in range(n):
-                if isFirst:
-                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] * weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
-                    stat = (stat * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
-                    temp_result.append(stat)
-                    temp_price = stat
-                    isFirst = False
-                else:
-                    stat = vars['GDP'][i] * weightings[ikeys[x]][0] - (vars['Unemployment Rate'][i] * weightings[ikeys[x]][1] + vars['Inflation Rate'][i] *
-                                weightings[ikeys[x]][2]) - (vars['Misery Index'][i] * vars['Misery Index'][i])
-                    stat = (stat * temp_price) + temp_price
-                    temp_result.append(stat)
-                    temp_price = stat
-
-
-
-            # We then append the resulting forcasted prices over n quarters to result, a dictionary where each
-            # Instrument ID is mapped to n forecast prices
-            result[ikeys[x]].append(temp_result)
-
-        #Table will represent a temporary table with the data appended matching the columns of the macroeconalgorithmforecast database table
-        table = []
-        #This forloop will populate table[] with the correct values according to the database structure
-        for i, k in result.items():
-            cnt = 0
-            for j in k:
-                for l in range(n):
-                    table.append([date[cnt], i, 'ALL', j[cnt], 'MSF2', 0])
-                    cnt += 1
-
-        #Once table is populated we then push it into the macroeconalgorithmforecast table
-        table = pd.DataFrame(table, columns=['forecastdate','instrumentid' , 'macroeconcode',
-                                            'forecastprice', 'algorithmcode', 'prederror'])
-        table.to_sql('dbo_macroeconalgorithmforecast', self.engine, if_exists=('append'), index=False)
+    # End of MSF_final accuracy tests)
 
 
     def MSF3(self):
