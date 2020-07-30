@@ -81,10 +81,10 @@ if update_macro_stats:
 # Generate MSF forecasts
 if update_msf_forecast:
     print("Generating MSF Forecasts...")
-    # DataForecast.MSF_final(db_engine)
     DataForecast.MSF1(db_engine)
     DataForecast.MSF2(db_engine)
     DataForecast.MSF3(db_engine)
+    DataForecast.MSF_final(db_engine)
     DataForecast.MSF2_Past_Date(db_engine)
 
 # Generate data engineered from close prices
