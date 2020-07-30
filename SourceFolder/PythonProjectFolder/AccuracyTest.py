@@ -460,8 +460,8 @@ def create_weightings_MSF2(self, setWeightings):
     data = pd.read_sql_query(query, self.engine)
 
     # Query to grab the instrumentid and instrument name from the instrumentmaster database table
-    # New instruments added SS2020 and we abandoned MSF so just limit to the ones they worked on (aka first 6)
-    query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster LIMIT 6'
+    # New instruments added SS2020 so, total instruments are 10 now
+    query = 'SELECT instrumentid, instrumentname FROM dbo_instrumentmaster'
     data1 = pd.read_sql_query(query, self.engine)
 
     # Keys is a dictionary that will be used to store the macro econ code for each macro econ name
@@ -478,7 +478,7 @@ def create_weightings_MSF2(self, setWeightings):
     vars = {}
     #Vars is only populated with the relevant macro economic variables (GDP, COVI, CPIUC, and FSI)
     for i in data['macroeconcode']:
-        if (i == 'GDP' or i == 'UR' or i == 'IR' or i == 'MI'):
+        if (i == 'GDP' or i == 'UR' or i == 'IR' or i == 'MI' or i == 'COVI'):
             d = {i: []}
             vars.update(d)
 
@@ -494,7 +494,8 @@ def create_weightings_MSF2(self, setWeightings):
     # end_date represents the date for which the forecasting ends
     end_date = "'2020-01-01'"
     # train_date represents the date we start collecting the instrument statistics used to forecast prices
-    train_date = "'2016-01-01'"
+    train_date = "'2015-01-01'"
+
 
     # For loop to loop through the macroeconomic codes to calculate the macro economic variable percent change
     for i in keys:
@@ -566,18 +567,19 @@ def create_weightings_MSF2(self, setWeightings):
                         for i in range(n):
                             if isFirst:
                                 #Change to pluses and test accuracy
-                                stat = vars['GDP'][i] * weight - vars['UR'][i] * uweight + vars['IR'][i] * iweight - (
+                                stat = vars['GDP'][i] * weight - vars['UR'][i] * uweight + vars['IR'][i] * iweight + vars['COVI'] * weight- (
                                             vars['MI'][i] * vars['MI'][i])
                                 stat = (stat * instrumentStats['close'].iloc[n-1]) + instrumentStats['close'].iloc[n-1]
                                 stat_check.append(stat)
                                 temp_price = stat
                                 isFirst = False
                             else:
-                                stat = vars['GDP'][i] * weight - (vars['UR'][i] * uweight + vars['IR'][i] * iweight) - (
+                                stat = vars['GDP'][i] * weight - (vars['UR'][i] * uweight + vars['IR'][i] * iweight + vars['COVI'] * weight) - (
                                         vars['MI'][i] * vars['MI'][i])
                                 stat = (stat * temp_price) + temp_price
                                 stat_check.append(stat)
                                 temp_price = stat
+
 
                         # We call to the weight check function using the list of forecasted prices, the current instrument id, the amount of datapoints we are working with, and the name of the function we are testing
                         # It then returns the average percent error and trend error for the forecasted prices, as well as the dates we are forecasting for so we can insert them into the visualize table
@@ -600,8 +602,8 @@ def create_weightings_MSF2(self, setWeightings):
                             best_forecast_prices = stat_check
 
             # Print statements to view the average percent error, trend error, and best weightings
-            print("The lowest avg percent error is %.7f%% for instrumentID %d" % (best_avg_error * 100, ikeys[x]), ' for function: MSF2')
-            print("The weightings are: ", best_weightings, ' for function: MSF2')
+            print("The lowest average absolute percent error is %.7f%% for instrumentID %d" % (best_avg_error * 100, ikeys[x]), ' for function: MSF2')
+            #print("The weightings are: ", best_weightings, ' for function: MSF2')
             print('The trend accuracy is: ', best_trend_error)
 
             # initializes weightings dictionary as the best weightings found for each instrument id
@@ -626,7 +628,12 @@ def create_weightings_MSF2(self, setWeightings):
                       3: [2.55, 3.3, 0.7],
                       4: [0.04999999999999982, 3.05, 0.7],
                       5: [-4.7, 3.3, 0.44999999999999996],
-                      6: [-1.2000000000000002, -3.7, -0.8]}
+                      6: [-1.2000000000000002, -3.7, -0.8],
+                      7: [-2.2, 3.3, 0.44999999999999996],
+                      8: [2.55, 3.3, 0.7],
+                      9: [0.04999999999999982, 3.05, 0.7],
+                      10: [-4.7, 3.3, 0.44999999999999996]
+                      }
 
         # We now iterate through the instrument ids
         for x in ikeys:
@@ -653,6 +660,7 @@ def create_weightings_MSF2(self, setWeightings):
 
             # Best forecast prices will be used to store the forecast prices for the best weightings to store them in a database for visual comparison later
             best_forecast_prices = []
+
 
             # We intialize a list to store the resulting forecasted prices to compare in another function
             stat_check = []
@@ -688,8 +696,8 @@ def create_weightings_MSF2(self, setWeightings):
 
             # Print statements to view the average percent error, trend error, and best weightings
             print("The lowest avg percent error is %.7f%% for instrumentID %d" % (avg_error * 100, ikeys[x]),
-                  ' for function: MSF2')
-            print("The weightings are: ", best_weightings, ' for function: MSF2')
+                  ' for function: MSF_final')
+            #print("The weightings are: ", best_weightings, ' for function: MSF2')
             print('The trend accuracy is: ', trend_error)
 
             # visual_comparisons will be used to store the past forecasted prices so we can visualize them compared to actual instrument prices on a graph
