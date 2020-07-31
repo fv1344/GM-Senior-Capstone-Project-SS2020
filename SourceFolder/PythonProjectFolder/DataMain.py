@@ -30,7 +30,7 @@ instrument_master = 'dbo_instrumentmaster'
 reset_date_dim = False                  # (Takes around 1 minute)
 
 # Collect the source data
-update_close_stats = True
+update_close_stats = False
 update_macro_stats = False
 
 # Calculate engineered data from close prices
@@ -84,7 +84,7 @@ if update_msf_forecast:
     DataForecast.MSF1(db_engine)
     DataForecast.MSF2(db_engine)
     DataForecast.MSF3(db_engine)
-    DataForecast.MSF_final(db_engine)
+    # DataForecast.MSF_final(db_engine)
     DataForecast.MSF2_Past_Date(db_engine)
 
 # Generate data engineered from close prices
